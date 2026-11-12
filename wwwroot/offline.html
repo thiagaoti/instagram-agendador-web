@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d0b14">
+  <title>Sem conexão - IG Agendador Pro</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background: #0d0b14;
+      color: #f5effa;
+    }
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      place-items: center;
+    }
+    main {
+      width: min(100%, 460px);
+      padding: 32px;
+      background: #181424;
+      border: 1px solid #2d2542;
+      border-radius: 18px;
+      text-align: center;
+      box-shadow: 0 20px 60px #0008;
+    }
+    .icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 20px;
+      color: #fff;
+    }
+    h1 {
+      margin-top: 0;
+      color: #ff4f8b;
+      font-size: 24px;
+    }
+    p {
+      line-height: 1.6;
+      color: #b4a7c7;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 14px;
+      padding: 12px 20px;
+      color: #16050c;
+      background: linear-gradient(90deg, #ff4f8b, #ff7a59);
+      border: 0;
+      border-radius: 9px;
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="icon">IG</div>
+    <h1>Você está sem conexão</h1>
+    <p>O aplicativo IG Agendador Pro precisa de conexão com a internet para carregar seus agendamentos e sincronizar com o Instagram.</p>
+    <button type="button" onclick="window.location.reload()">Tentar novamente</button>
+  </main>
+</body>
+</html>

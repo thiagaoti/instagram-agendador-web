@@ -1,0 +1,75 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace InstagramAgendador.Web.Models;
+
+public static class StatusPostInstagram
+{
+    public const string Agendado = "Agendado";
+    public const string Publicando = "Publicando";
+    public const string Publicado = "Publicado";
+    public const string Falha = "Falha";
+    public const string Cancelado = "Cancelado";
+}
+
+public static class TipoMidiaInstagram
+{
+    public const string Feed = "Feed";
+    public const string Stories = "Stories";
+    public const string FeedEStories = "FeedEStories";
+}
+
+public class InstagramPostAgendado
+{
+    public int Id { get; set; }
+
+    public int InstagramContaId { get; set; }
+
+    [Required]
+    [StringLength(100)]
+    public string IdentificadorInstagram { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(180)]
+    public string Titulo { get; set; } = string.Empty;
+
+    [StringLength(2200)]
+    public string Legenda { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(30)]
+    public string TipoPublicacao { get; set; } = TipoMidiaInstagram.Feed;
+
+    public byte[]? ConteudoImagem { get; set; }
+
+    [StringLength(80)]
+    public string? ContentTypeImagem { get; set; }
+
+    [StringLength(1000)]
+    public string? UrlImagemExterna { get; set; }
+
+    [StringLength(500)]
+    public string? BaseUrlPublica { get; set; }
+
+    public DateTime HorarioProgramadoLocal { get; set; }
+
+    public DateTimeOffset HorarioProgramadoUtc { get; set; }
+
+    [Required]
+    [StringLength(30)]
+    public string Status { get; set; } = StatusPostInstagram.Agendado;
+
+    [StringLength(120)]
+    public string? CreationIdMeta { get; set; }
+
+    [StringLength(120)]
+    public string? MediaIdMeta { get; set; }
+
+    public int Tentativas { get; set; }
+
+    [StringLength(1500)]
+    public string? UltimoErro { get; set; }
+
+    public DateTimeOffset CriadoEmUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    public DateTimeOffset? PublicadoEmUtc { get; set; }
+}

@@ -1,0 +1,657 @@
+@page
+@model InstagramAgendador.Web.Pages.Configuracoes.IndexModel
+@{
+    ViewData["Title"] = "Admin: Usuários, Perfis IG e Configurações";
+}
+
+<style>
+    .cfg-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+        flex-wrap: wrap;
+    }
+
+    .cfg-eyebrow {
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .cfg-title {
+        margin: 0;
+        font-size: clamp(24px, 3.5vw, 32px);
+        font-weight: 900;
+    }
+
+    .cfg-desc {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        max-width: 820px;
+        line-height: 1.6;
+    }
+
+    .cfg-alert {
+        padding: 13px 16px;
+        margin-bottom: 20px;
+        border-radius: 10px;
+        background: #153224;
+        border: 1px solid #285c40;
+        color: #9af0b9;
+        font-size: 13px;
+    }
+
+    .cfg-alert.erro {
+        background: #3b1c26;
+        border-color: #7b3248;
+        color: #ffb4b4;
+    }
+
+    .cfg-section {
+        padding: 22px;
+        margin-bottom: 24px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+    }
+
+    .cfg-section-title {
+        margin: 0 0 4px;
+        font-size: 18px;
+        font-weight: 850;
+    }
+
+    .cfg-section-sub {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 12.5px;
+    }
+
+    .cfg-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+        gap: 14px;
+    }
+
+    .cfg-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .cfg-field label {
+        font-size: 11.5px;
+        font-weight: 750;
+        color: #e2d7f0;
+    }
+
+    .cfg-field input,
+    .cfg-field select {
+        padding: 9px 11px;
+        background: var(--panel-alt);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 12.5px;
+    }
+
+    .cfg-field small {
+        font-size: 10.5px;
+        color: var(--muted);
+    }
+
+    .cfg-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 38px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-decoration: none;
+    }
+
+    .cfg-btn-primary {
+        background: linear-gradient(90deg, #ff4f8b, #ff7a59);
+        color: #16050c;
+    }
+
+    .cfg-btn-secondary {
+        background: #231c35;
+        border-color: #3d315b;
+        color: #eadff7;
+    }
+
+    .cfg-btn-danger {
+        background: #381924;
+        border-color: #6e2b42;
+        color: #ffb4b4;
+    }
+
+    .cfg-card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 18px;
+    }
+
+    .cfg-account-card {
+        padding: 18px;
+        background: var(--panel-alt);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    .cfg-pill {
+        display: inline-block;
+        padding: 4px 9px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 850;
+        text-transform: uppercase;
+    }
+
+    .cfg-pill.ok {
+        background: #153224;
+        color: #9af0b9;
+        border: 1px solid #285c40;
+    }
+
+    .cfg-pill.warn {
+        background: #382a14;
+        color: #ffd089;
+        border: 1px solid #6b4e20;
+    }
+
+    .cfg-pill.user {
+        background: #231934;
+        color: #f3d4ff;
+        border: 1px solid #442f66;
+    }
+</style>
+
+<div class="cfg-header">
+    <div>
+        <div class="cfg-eyebrow">PAINEL EXCLUSIVO DO ADMINISTRADOR</div>
+        <h1 class="cfg-title">Incluir Perfis do Instagram por Usuário & Configurações</h1>
+        <p class="cfg-desc">
+            Somente você (Administrador) tem acesso a esta tela. Aqui você inclui o(s) perfil(is) do Instagram para cada usuário com a sua respectiva configuração (Account ID, Access Token Meta e horários de postagem).
+        </p>
+    </div>
+    <a href="/" class="cfg-btn cfg-btn-secondary">← Voltar para a Central de Agendamentos</a>
+</div>
+
+@if (TempData["Mensagem"] is string msg)
+{
+    <div class="cfg-alert @(TempData["TipoMensagem"]?.ToString() == "erro" ? "erro" : "")" role="status">
+        @msg
+    </div>
+}
+
+<!-- 1. INCLUIR PERFIL DO INSTAGRAM PARA CADA USUÁRIO COM SUA RESPECTIVA CONFIGURAÇÃO -->
+<section class="cfg-section">
+    <h2 class="cfg-section-title">1. Incluir Perfil do Instagram para um Usuário + Configuração da Conta</h2>
+    <p class="cfg-section-sub">
+        Escolha para qual usuário será este perfil do Instagram (ou crie o usuário junto abaixo) e preencha a configuração exclusiva da conta dele.
+    </p>
+
+    <form method="post" asp-page-handler="SalvarContaInstagram">
+        @Html.AntiForgeryToken()
+
+        <!-- Vínculo de Usuário -->
+        <div style="margin-bottom:16px;padding:15px;background:var(--panel-alt);border:1px solid #442f66;border-radius:11px;">
+            <div style="font-size:12px;font-weight:850;color:#ff4f8b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
+                Passo A — Para qual Usuário é este Perfil do Instagram?
+            </div>
+
+            <div class="cfg-grid">
+                <div class="cfg-field">
+                    <label for="seletorUsuarioVinculo">Selecionar Usuário do Sistema</label>
+                    <select id="seletorUsuarioVinculo" name="usuarioAcessoId">
+                        <option value="0">+ Criar um Novo Usuário para este Instagram abaixo</option>
+                        @foreach (var u in Model.UsuariosAcesso)
+                        {
+                            <option value="@u.Id">
+                                @u.NomeExibicao (Login: @u.Login) @(u.Administrador ? "[Admin]" : "[Usuário]")
+                            </option>
+                        }
+                    </select>
+                    <small>O usuário selecionado terá acesso direto a este perfil do Instagram.</small>
+                </div>
+            </div>
+
+            <div id="blocoCriarNovoUsuario" style="margin-top:14px;padding-top:12px;border-top:1px dashed #3d315b;">
+                <div class="cfg-grid">
+                    <div class="cfg-field">
+                        <label for="novoUsuarioNome">Nome do Novo Usuário / Cliente</label>
+                        <input id="novoUsuarioNome"
+                               name="novoUsuarioNome"
+                               type="text"
+                               placeholder="Ex.: Cliente Loja X" />
+                    </div>
+                    <div class="cfg-field">
+                        <label for="novoUsuarioLogin">Login de Acesso do Usuário</label>
+                        <input id="novoUsuarioLogin"
+                               name="novoUsuarioLogin"
+                               type="text"
+                               autocapitalize="none"
+                               placeholder="Ex.: lojax" />
+                    </div>
+                    <div class="cfg-field">
+                        <label for="novoUsuarioSenha">Senha Inicial do Usuário</label>
+                        <input id="novoUsuarioSenha"
+                               name="novoUsuarioSenha"
+                               type="password"
+                               placeholder="Mínimo de 4 caracteres" />
+                    </div>
+                    <div class="cfg-field" style="justify-content:center;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:16px;">
+                            <input type="checkbox" name="novoUsuarioAdmin" value="true" />
+                            Tornar este usuário Administrador também
+                        </label>
+                        <small>Se desmarcado, ele verá apenas os agendamentos do próprio Instagram.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dados do Perfil do Instagram e Respectiva Configuração -->
+        <div style="font-size:12px;font-weight:850;color:#ff4f8b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
+            Passo B — Perfil do Instagram e Respectiva Configuração (Meta Graph API & Horários)
+        </div>
+
+        <div class="cfg-grid">
+            <div class="cfg-field">
+                <label for="novoArroba">Qual é o Instagram deste cadastro? (@@perfil)</label>
+                <input id="novoArroba"
+                       name="identificadorInstagram"
+                       type="text"
+                       placeholder="Ex.: @@scooterachadinhos"
+                       required />
+                <small>O @@ do perfil do Instagram vinculado.</small>
+            </div>
+
+            <div class="cfg-field">
+                <label for="novoNomeCadastro">Nome de Identificação do Perfil</label>
+                <input id="novoNomeCadastro"
+                       name="nomeCadastro"
+                       type="text"
+                       placeholder="Ex.: Instagram Oficial Cliente X"
+                       required />
+                <small>Nome exibido no painel.</small>
+            </div>
+
+            <div class="cfg-field">
+                <label for="novoAccountId">Instagram Account ID (Meta Graph API)</label>
+                <input id="novoAccountId"
+                       name="accountIdMeta"
+                       type="text"
+                       placeholder="Ex.: 17841405829104921"
+                       required />
+                <small>ID da conta Instagram Business/Creator na Meta.</small>
+            </div>
+
+            <div class="cfg-field">
+                <label for="novoAccessToken">Access Token (Meta Graph API)</label>
+                <input id="novoAccessToken"
+                       name="accessTokenMeta"
+                       type="password"
+                       placeholder="EAABsbCS1iHgBO..."
+                       required />
+                <small>Token de acesso com permissão de publicação deste Instagram.</small>
+            </div>
+
+            <div class="cfg-field">
+                <label for="novoHorariosFeed">Horários diários padrão do Feed (HH:mm)</label>
+                <input id="novoHorariosFeed"
+                       name="horariosFeed"
+                       type="text"
+                       value="09:00, 13:00, 18:00"
+                       placeholder="09:00, 13:00, 18:00" />
+                <small>Horários da fila automática de Feed deste perfil.</small>
+            </div>
+
+            <div class="cfg-field">
+                <label for="novoHorariosStory">Horários diários padrão dos Stories (HH:mm)</label>
+                <input id="novoHorariosStory"
+                       name="horariosStory"
+                       type="text"
+                       value="10:00, 19:00"
+                       placeholder="10:00, 19:00" />
+                <small>Horários padrão dos Stories recorrentes deste perfil.</small>
+            </div>
+
+            <div class="cfg-field">
+                <label for="novoBaseUrl">URL Pública deste Sistema</label>
+                <input id="novoBaseUrl"
+                       name="baseUrlPublica"
+                       type="url"
+                       value="@Model.BaseUrlDetectada" />
+                <small>Usada para servir fotos enviadas do celular/PC à Meta.</small>
+            </div>
+
+            <div class="cfg-field" style="justify-content:center;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px;">
+                    <input type="checkbox" name="publicacaoAutomaticaAtiva" value="true" checked />
+                    Publicação automática agendada ativa
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:6px;">
+                    <input type="checkbox" name="definirComoPadrao" value="true" />
+                    Definir como perfil padrão
+                </label>
+            </div>
+        </div>
+
+        <div style="margin-top:16px;">
+            <button type="submit" class="cfg-btn cfg-btn-primary">
+                + Incluir Perfil do Instagram e Salvar Configuração
+            </button>
+        </div>
+    </form>
+</section>
+
+<!-- 2. PERFIS DO INSTAGRAM CADASTRADOS E SUAS CONFIGURAÇÕES POR USUÁRIO -->
+<section class="cfg-section">
+    <h2 class="cfg-section-title">2. Perfis do Instagram Cadastrados e Respectivas Configurações (@Model.ContasInstagram.Count)</h2>
+    <p class="cfg-section-sub">
+        Gerencie cada perfil do Instagram, veja e altere a qual usuário ele pertence, atualize tokens/horários ou teste a conexão com a Meta Graph API.
+    </p>
+
+    @if (Model.ContasInstagram.Count == 0)
+    {
+        <div style="padding:28px;text-align:center;color:var(--muted);">
+            Nenhum perfil do Instagram cadastrado ainda. Use o formulário acima para incluir o primeiro perfil.
+        </div>
+    }
+    else
+    {
+        <div class="cfg-card-list">
+            @foreach (var conta in Model.ContasInstagram)
+            {
+                var tokenConfigurado = !string.IsNullOrWhiteSpace(conta.AccessTokenMeta) && conta.AccessTokenMeta != "PENDENTE";
+                var accountConfigurado = !string.IsNullOrWhiteSpace(conta.AccountIdMeta) && conta.AccountIdMeta != "PENDENTE";
+                var credenciaisProntas = tokenConfigurado && accountConfigurado;
+
+                <div class="cfg-account-card">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                        <div>
+                            <span style="font-size:16px;font-weight:900;color:#fff;">
+                                @conta.IdentificadorInstagram
+                            </span>
+                            <span style="margin-left:8px;font-size:13px;color:var(--muted);">
+                                — <strong style="color:#eadff7;">@conta.NomeCadastro</strong>
+                            </span>
+                            <span class="cfg-pill user" style="margin-left:8px;">
+                                Usuário: @(string.IsNullOrWhiteSpace(conta.LoginUsuarioVinculado) ? "Acesso Admin" : conta.LoginUsuarioVinculado)
+                            </span>
+                        </div>
+
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <span class="cfg-pill @(credenciaisProntas && conta.Ativo ? "ok" : "warn")">
+                                @( !conta.Ativo ? "Pausado" : credenciaisProntas ? "Configuração Ativa" : "Credenciais Pendentes" )
+                            </span>
+
+                            <form method="post" asp-page-handler="TestarConexao" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="contaId" value="@conta.Id" />
+                                <button type="submit" class="cfg-btn cfg-btn-secondary">
+                                    Testar Conexão Meta API
+                                </button>
+                            </form>
+
+                            <form method="post" asp-page-handler="AlternarContaAtiva" style="margin:0;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="contaId" value="@conta.Id" />
+                                <button type="submit" class="cfg-btn cfg-btn-secondary">
+                                    @(conta.Ativo ? "Pausar" : "Ativar")
+                                </button>
+                            </form>
+
+                            <form method="post"
+                                  asp-page-handler="ExcluirConta"
+                                  style="margin:0;"
+                                  onsubmit="return confirm('Tem certeza que deseja excluir este perfil do Instagram e seus agendamentos?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="contaId" value="@conta.Id" />
+                                <button type="submit" class="cfg-btn cfg-btn-danger">Excluir</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(conta.UltimoTesteStatus))
+                    {
+                        <div style="margin-bottom:12px;padding:9px 12px;background:#191428;border:1px solid #352b4d;border-radius:8px;font-size:12px;color:#d8c9ee;">
+                            <strong>Último teste da API Meta:</strong> @conta.UltimoTesteStatus
+                        </div>
+                    }
+
+                    <form method="post" asp-page-handler="SalvarContaInstagram">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="contaId" value="@conta.Id" />
+
+                        <div class="cfg-grid">
+                            <div class="cfg-field">
+                                <label>Usuário Responsável por este Perfil</label>
+                                <select name="usuarioAcessoId">
+                                    <option value="">Somente Administradores</option>
+                                    @foreach (var u in Model.UsuariosAcesso)
+                                    {
+                                        <option value="@u.Id" selected="@(conta.UsuarioAcessoId == u.Id ? "selected" : null)">
+                                            @u.NomeExibicao (@u.Login)
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="cfg-field">
+                                <label>Instagram (@@perfil)</label>
+                                <input type="text" name="identificadorInstagram" value="@conta.IdentificadorInstagram" required />
+                            </div>
+
+                            <div class="cfg-field">
+                                <label>Nome de Identificação</label>
+                                <input type="text" name="nomeCadastro" value="@conta.NomeCadastro" required />
+                            </div>
+
+                            <div class="cfg-field">
+                                <label>Instagram Account ID (Meta)</label>
+                                <input type="text" name="accountIdMeta" value="@conta.AccountIdMeta" required />
+                            </div>
+
+                            <div class="cfg-field">
+                                <label>Access Token Meta (deixe vazio p/ manter)</label>
+                                <input type="password"
+                                       name="accessTokenMeta"
+                                       placeholder="@(tokenConfigurado ? "•••••••• (Token salvo)" : "Cole o Access Token")" />
+                            </div>
+
+                            <div class="cfg-field">
+                                <label>Horários diários Feed (HH:mm)</label>
+                                <input type="text"
+                                       name="horariosFeed"
+                                       value="@Model.FormatarHorarios(conta.HorariosFeedJson, "09:00, 13:00, 18:00")" />
+                            </div>
+
+                            <div class="cfg-field">
+                                <label>Horários diários Stories (HH:mm)</label>
+                                <input type="text"
+                                       name="horariosStory"
+                                       value="@Model.FormatarHorarios(conta.HorariosStoryJson, "10:00, 19:00")" />
+                            </div>
+
+                            <div class="cfg-field" style="justify-content:flex-end;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox"
+                                           name="publicacaoAutomaticaAtiva"
+                                           value="true"
+                                           @(conta.PublicacaoAutomaticaAtiva ? "checked" : null) />
+                                    Publicação automática ativa
+                                </label>
+                                <button type="submit" class="cfg-btn cfg-btn-primary" style="margin-top:6px;">
+                                    Salvar Configuração deste Perfil
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<!-- 3. GERENCIAMENTO DE USUÁRIOS E SEUS RESPECTIVOS PERFIS VINCULADOS -->
+<section class="cfg-section">
+    <h2 class="cfg-section-title">3. Usuários Cadastrados e Controle de Acesso (@Model.UsuariosAcesso.Count)</h2>
+    <p class="cfg-section-sub">
+        Crie novos usuários, redefina senhas, altere o perfil do Instagram vinculado a cada usuário ou defina quem é Administrador.
+    </p>
+
+    <form method="post"
+          asp-page-handler="SalvarUsuario"
+          style="padding:16px;background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;">
+        @Html.AntiForgeryToken()
+
+        <div class="cfg-grid" style="align-items:end;">
+            <div class="cfg-field">
+                <label for="usrNome">Nome do Usuário / Cliente</label>
+                <input id="usrNome"
+                       name="nomeExibicao"
+                       type="text"
+                       placeholder="Ex.: Maria - Loja 2"
+                       required />
+            </div>
+
+            <div class="cfg-field">
+                <label for="usrLogin">Usuário (Login)</label>
+                <input id="usrLogin"
+                       name="login"
+                       type="text"
+                       autocapitalize="none"
+                       placeholder="Ex.: maria"
+                       required />
+            </div>
+
+            <div class="cfg-field">
+                <label for="usrSenha">Senha</label>
+                <input id="usrSenha"
+                       name="senha"
+                       type="password"
+                       placeholder="Mínimo de 4 caracteres"
+                       required />
+            </div>
+
+            <div class="cfg-field">
+                <label for="usrContaIg">Perfil do Instagram deste Usuário</label>
+                <select id="usrContaIg" name="instagramContaId">
+                    <option value="">Selecionar perfil do Instagram...</option>
+                    @foreach (var conta in Model.ContasInstagram)
+                    {
+                        <option value="@conta.Id">
+                            @conta.IdentificadorInstagram (@conta.NomeCadastro)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="cfg-field">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                    <input type="checkbox" name="administrador" value="true" />
+                    Acesso de Administrador
+                </label>
+                <button type="submit" class="cfg-btn cfg-btn-primary">
+                    + Cadastrar Usuário
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="cfg-card-list">
+        @foreach (var usr in Model.UsuariosAcesso)
+        {
+            <div class="cfg-account-card">
+                <form method="post" asp-page-handler="SalvarUsuario">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="usuarioId" value="@usr.Id" />
+
+                    <div class="cfg-grid" style="align-items:end;">
+                        <div class="cfg-field">
+                            <label>Nome do Usuário</label>
+                            <input type="text" name="nomeExibicao" value="@usr.NomeExibicao" required />
+                        </div>
+
+                        <div class="cfg-field">
+                            <label>Login</label>
+                            <input type="text" name="login" value="@usr.Login" required />
+                        </div>
+
+                        <div class="cfg-field">
+                            <label>Perfil do Instagram Vinculado</label>
+                            <select name="instagramContaId">
+                                <option value="">@(usr.Administrador ? "Todos os Perfis (Admin)" : "Nenhum perfil selecionado")</option>
+                                @foreach (var conta in Model.ContasInstagram)
+                                {
+                                    <option value="@conta.Id"
+                                            selected="@(usr.InstagramContaId == conta.Id ? "selected" : null)">
+                                        @conta.IdentificadorInstagram — @conta.NomeCadastro
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="cfg-field">
+                            <label>Nova Senha (vazio p/ manter)</label>
+                            <input type="password" name="senha" placeholder="••••••••" />
+                        </div>
+
+                        <div class="cfg-field">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;">
+                                <input type="checkbox"
+                                       name="administrador"
+                                       value="true"
+                                       @(usr.Administrador ? "checked" : null) />
+                                Administrador
+                            </label>
+                            <button type="submit" class="cfg-btn cfg-btn-secondary">Salvar Usuário</button>
+                        </div>
+                    </div>
+                </form>
+
+                @if (Model.UsuariosAcesso.Count > 1)
+                {
+                    <form method="post"
+                          asp-page-handler="ExcluirUsuario"
+                          style="margin-top:8px;"
+                          onsubmit="return confirm('Deseja remover este usuário?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="usuarioId" value="@usr.Id" />
+                        <button type="submit" class="cfg-btn cfg-btn-danger">Excluir Usuário</button>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<script>
+    (() => {
+        const selectUsr = document.getElementById("seletorUsuarioVinculo");
+        const blocoNovoUsr = document.getElementById("blocoCriarNovoUsuario");
+        if (selectUsr && blocoNovoUsr) {
+            const atualizar = () => {
+                blocoNovoUsr.style.display = selectUsr.value === "0" ? "block" : "none";
+            };
+            selectUsr.addEventListener("change", atualizar);
+            atualizar();
+        }
+    })();
+</script>

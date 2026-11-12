@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: instagram-agendador-web
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+      - key: Authentication__Username
+        value: admin
+      - key: Authentication__Password
+        sync: false

@@ -1,0 +1,371 @@
+@page
+@model InstagramAgendador.Web.Pages.Account.LoginModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0b14" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="IG Agendador" />
+    <title>Entrar - IG Agendador Pro</title>
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <link rel="icon" href="~/pwa/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="~/pwa/icon-192.png" />
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            background: #0d0b14;
+            color: #f5effa;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at top right, #dd2a7b22, transparent 45%),
+                        radial-gradient(circle at bottom left, #8134af22, transparent 45%),
+                        #0d0b14;
+        }
+
+        .auth-card {
+            width: min(100%, 430px);
+            padding: 34px 30px;
+            background: #181424;
+            border: 1px solid #2d2542;
+            border-radius: 18px;
+            box-shadow: 0 24px 80px #0009;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .brand-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 900;
+            box-shadow: 0 6px 20px #dd2a7b44;
+        }
+
+        .brand-icon svg {
+            width: 26px;
+            height: 26px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .brand-tag {
+            color: #ff4f8b;
+            font-size: 11px;
+            font-weight: 850;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 4px 0 0;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            margin: 0 0 22px;
+            color: #9d91b0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 6px;
+            color: #e2d7f0;
+            font-size: 12.5px;
+            font-weight: 750;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            min-height: 45px;
+            padding: 10px 13px;
+            color: #f5effa;
+            background: #110e1a;
+            border: 1px solid #352b4d;
+            border-radius: 9px;
+            font-size: 13.5px;
+        }
+
+        input:focus {
+            outline: 2px solid #ff4f8b;
+            outline-offset: 1px;
+        }
+
+        .toggle-pass {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 4px 8px;
+            background: #221b33;
+            color: #cbbce0;
+            border: 1px solid #382d52;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .remember-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .remember-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            margin: 0;
+            color: #d9cde8;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .remember-label input[type="checkbox"] {
+            width: 17px;
+            height: 17px;
+            accent-color: #ff4f8b;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            width: 100%;
+            min-height: 46px;
+            margin-top: 22px;
+            color: #14050b;
+            background: linear-gradient(90deg, #ff4f8b, #ff7a59);
+            border: 0;
+            border-radius: 9px;
+            font-size: 13.5px;
+            font-weight: 850;
+            cursor: pointer;
+        }
+
+        .btn-pwa {
+            width: 100%;
+            min-height: 42px;
+            margin-top: 12px;
+            color: #f5effa;
+            background: #231c35;
+            border: 1px solid #443566;
+            border-radius: 9px;
+            font-size: 12.5px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .btn-pwa[hidden] {
+            display: none;
+        }
+
+        .alert-error {
+            margin-bottom: 16px;
+            padding: 11px 13px;
+            border-radius: 9px;
+            color: #ffb4b4;
+            background: #3b1c26;
+            border: 1px solid #7b3248;
+            font-size: 12.5px;
+            line-height: 1.5;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            padding-top: 14px;
+            border-top: 1px solid #28203b;
+            color: #877a9b;
+            font-size: 11.5px;
+            text-align: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <main class="auth-card">
+        <div class="brand-row">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="5" />
+                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="17.5" cy="6.5" r="1" />
+                </svg>
+            </div>
+            <div>
+                <div class="brand-tag">IG AGENDADOR PRO</div>
+                <h1>Acesse sua conta</h1>
+            </div>
+        </div>
+
+        <p class="subtitle">
+            Entre com o seu usuário e senha para acessar o painel de agendamentos do seu Instagram.
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Erro))
+        {
+            <div class="alert-error" role="alert">@Model.Erro</div>
+        }
+
+        <form method="post" id="formLogin">
+            @Html.AntiForgeryToken()
+            <input asp-for="ReturnUrl" type="hidden" />
+
+            <label for="loginUsuario">Usuário</label>
+            <input id="loginUsuario"
+                   name="Usuario"
+                   type="text"
+                   value="@Model.Usuario"
+                   autocomplete="username"
+                   autocapitalize="none"
+                   placeholder="Digite seu usuário"
+                   required
+                   autofocus />
+
+            <label for="loginSenha">Senha</label>
+            <div class="input-wrap">
+                <input id="loginSenha"
+                       name="Senha"
+                       type="password"
+                       autocomplete="current-password"
+                       placeholder="Digite sua senha"
+                       style="padding-right:76px;"
+                       required />
+                <button type="button" class="toggle-pass" id="btnTogglePass">Mostrar</button>
+            </div>
+
+            <div class="remember-row">
+                <label class="remember-label" for="chkLembrarSenha">
+                    <input id="chkLembrarSenha"
+                           name="LembrarSenha"
+                           type="checkbox"
+                           value="true"
+                           @(Model.LembrarSenha ? "checked" : null) />
+                    <span>Lembrar senha neste dispositivo</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-submit">Entrar no Aplicativo</button>
+
+            <button type="button" class="btn-pwa" id="btnInstallLogin" hidden>
+                📲 Instalar Aplicativo (PWA) no Dispositivo
+            </button>
+        </form>
+
+        <div class="footer-note">
+            A inclusão de novos perfis do Instagram e configurações de acesso é realizada exclusivamente pelo <strong>Administrador</strong>.
+        </div>
+    </main>
+
+    <script>
+        (() => {
+            const STORAGE_KEY = "ig_agendador_saved_creds_v1";
+            const inputUser = document.getElementById("loginUsuario");
+            const inputPass = document.getElementById("loginSenha");
+            const chkRemember = document.getElementById("chkLembrarSenha");
+            const btnTogglePass = document.getElementById("btnTogglePass");
+            const formLogin = document.getElementById("formLogin");
+
+            // Restaura usuário e senha salvos se "Lembrar senha" estava ativo
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    if (saved && saved.u && !inputUser.value) {
+                        inputUser.value = saved.u;
+                    }
+                    if (saved && saved.p && !inputPass.value) {
+                        inputPass.value = atob(saved.p);
+                    }
+                    if (chkRemember) {
+                        chkRemember.checked = true;
+                    }
+                }
+            } catch { }
+
+            if (btnTogglePass && inputPass) {
+                btnTogglePass.addEventListener("click", () => {
+                    const isPass = inputPass.type === "password";
+                    inputPass.type = isPass ? "text" : "password";
+                    btnTogglePass.textContent = isPass ? "Ocultar" : "Mostrar";
+                });
+            }
+
+            if (formLogin) {
+                formLogin.addEventListener("submit", () => {
+                    try {
+                        if (chkRemember && chkRemember.checked) {
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                                u: inputUser.value.trim(),
+                                p: btoa(inputPass.value)
+                            }));
+                        } else {
+                            localStorage.removeItem(STORAGE_KEY);
+                        }
+                    } catch { }
+                });
+            }
+
+            // Registro do Service Worker e instalação PWA
+            if ("serviceWorker" in navigator && window.isSecureContext) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+                });
+            }
+
+            let deferredPrompt = null;
+            const btnInstall = document.getElementById("btnInstallLogin");
+            const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+            if (btnInstall && !isStandalone) {
+                window.addEventListener("beforeinstallprompt", e => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    btnInstall.hidden = false;
+                });
+
+                btnInstall.addEventListener("click", async () => {
+                    if (!deferredPrompt) return;
+                    await deferredPrompt.prompt();
+                    deferredPrompt = null;
+                    btnInstall.hidden = true;
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
