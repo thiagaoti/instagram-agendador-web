@@ -8,7 +8,7 @@ public class InstagramContaCadastro
 
     public int? UsuarioAcessoId { get; set; }
 
-    [StringLength(100)]
+    [StringLength(250)]
     public string? LoginUsuarioVinculado { get; set; }
 
     [Required]
@@ -24,7 +24,6 @@ public class InstagramContaCadastro
     public string AccountIdMeta { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(1200)]
     public string AccessTokenMeta { get; set; } = string.Empty;
 
     [Required]

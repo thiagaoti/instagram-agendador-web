@@ -119,7 +119,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId = instagramContaId });
@@ -176,7 +176,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -203,7 +203,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -221,7 +221,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -239,7 +239,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -298,7 +298,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId = instagramContaId });
@@ -359,7 +359,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -386,7 +386,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -404,7 +404,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });
@@ -422,7 +422,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage(new { ContaId });

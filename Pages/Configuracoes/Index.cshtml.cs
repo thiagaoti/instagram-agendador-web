@@ -112,7 +112,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage();
@@ -140,7 +140,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage();
@@ -163,7 +163,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage();
@@ -186,7 +186,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage();
@@ -227,7 +227,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage();
@@ -250,7 +250,7 @@ public sealed class IndexModel : PageModel
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.Message;
+            TempData["Mensagem"] = ex.GetBaseException().Message;
         }
 
         return RedirectToPage();

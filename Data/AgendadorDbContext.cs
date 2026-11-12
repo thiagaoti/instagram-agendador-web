@@ -18,15 +18,39 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<InstagramPostAgendado> PostsAgendados => Set<InstagramPostAgendado>();
     public DbSet<InstagramStoryRecorrente> StoriesRecorrentes => Set<InstagramStoryRecorrente>();
 
+    private static readonly ValueConverter<DateTime, DateTime> DataHoraLocalConverter = new(
+        valor => DateTime.SpecifyKind(valor, DateTimeKind.Unspecified),
+        valor => DateTime.SpecifyKind(valor, DateTimeKind.Local));
+
+    private static readonly ValueConverter<DateTime?, DateTime?> DataHoraLocalNulaConverter = new(
+        valor => valor.HasValue
+            ? DateTime.SpecifyKind(valor.Value, DateTimeKind.Unspecified)
+            : null,
+        valor => valor.HasValue
+            ? DateTime.SpecifyKind(valor.Value, DateTimeKind.Local)
+            : null);
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        var ehSqlite = Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
 
         modelBuilder.Entity<InstagramContaCadastro>(entity =>
         {
             entity.ToTable("IgSistema_ContasInstagram");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.IdentificadorInstagram);
+
+            if (!ehSqlite)
+            {
+                entity.Property(e => e.UltimoTesteEmUtc)
+                    .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CriadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.AtualizadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+            }
         });
 
         modelBuilder.Entity<UsuarioAcesso>(entity =>
@@ -34,6 +58,12 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
             entity.ToTable("IgSistema_UsuariosAcesso");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Login).IsUnique();
+
+            if (!ehSqlite)
+            {
+                entity.Property(e => e.CriadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+            }
         });
 
         modelBuilder.Entity<InstagramPostAgendado>(entity =>
@@ -41,6 +71,19 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
             entity.ToTable("IgSistema_PostsAgendados");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.InstagramContaId, e.Status, e.HorarioProgramadoUtc });
+
+            if (!ehSqlite)
+            {
+                entity.Property(e => e.HorarioProgramadoLocal)
+                    .HasColumnType("timestamp without time zone")
+                    .HasConversion(DataHoraLocalConverter);
+                entity.Property(e => e.HorarioProgramadoUtc)
+                    .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CriadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.PublicadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+            }
         });
 
         modelBuilder.Entity<InstagramStoryRecorrente>(entity =>
@@ -48,9 +91,25 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
             entity.ToTable("IgSistema_StoriesRecorrentes");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.InstagramContaId, e.Ativo, e.ProximoDisparoUtc });
+
+            if (!ehSqlite)
+            {
+                entity.Property(e => e.DataHoraUnicaLocal)
+                    .HasColumnType("timestamp without time zone")
+                    .HasConversion(DataHoraLocalNulaConverter);
+                entity.Property(e => e.ProximoDisparoLocal)
+                    .HasColumnType("timestamp without time zone")
+                    .HasConversion(DataHoraLocalConverter);
+                entity.Property(e => e.ProximoDisparoUtc)
+                    .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.UltimaPublicacaoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CriadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+            }
         });
 
-        if (Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true)
+        if (ehSqlite)
         {
             var converter = new ValueConverter<DateTimeOffset, DateTime>(
                 v => v.UtcDateTime,
