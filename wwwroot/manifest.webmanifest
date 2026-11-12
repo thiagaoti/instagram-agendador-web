@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "IG Agendador Pro - Feed & Stories",
-  "short_name": "IG Agendador",
-  "description": "Sistema independente de agendamento automático de Feed e Stories do Instagram",
+  "name": "Agendador Pro - Social Suite",
+  "short_name": "Agendador Pro",
+  "description": "Sistema inteligente de agendamento automático de Feed e Stories",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
