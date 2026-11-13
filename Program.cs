@@ -96,6 +96,13 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/ping", () => Results.Ok(new
+{
+    status = "alive",
+    system = "AgendadorPro",
+    horaLocal = FusoHorarioService.AgoraLocal.ToString("yyyy-MM-dd HH:mm:ss")
+})).AllowAnonymous();
+
 app.MapGet("/healthz", async (
     IDbContextFactory<AgendadorDbContext> dbFactory,
     CancellationToken cancellationToken) =>
