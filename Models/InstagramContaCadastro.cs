@@ -41,6 +41,10 @@ public class InstagramContaCadastro
     [StringLength(500)]
     public string HorariosStoryJson { get; set; } = "[\"10:00\",\"19:00\"]";
 
+    [Required]
+    [StringLength(150)]
+    public string DiasSemanaJson { get; set; } = "[0,1,2,3,4,5,6]";
+
     public bool PublicacaoAutomaticaAtiva { get; set; } = true;
 
     public bool Ativo { get; set; } = true;

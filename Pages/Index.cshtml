@@ -299,6 +299,36 @@
     .pill.falha { background: #3b1c26; color: #ffb4b4; border: 1px solid #7b3248; }
     .pill.cancelado { background: #211d29; color: #9d91b0; border: 1px solid #352e42; }
 
+    .days-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    .day-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 10px;
+        background: var(--panel-alt);
+        border: 1px solid #3a2e56;
+        border-radius: 8px;
+        font-size: 11.5px;
+        font-weight: 800;
+        color: #dfd3f2;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .day-chip input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        accent-color: #ff4f8b;
+        cursor: pointer;
+    }
+
     @@media (max-width: 780px) {
         .split-layout,
         .split-layout-studio,
@@ -497,11 +527,12 @@ else
                         </div>
 
                         <div class="field">
-                            <label for="postModoHorario">Horário do agendamento</label>
+                            <label for="postModoHorario">Quando postar?</label>
                             <select id="postModoHorario" name="modoHorario">
                                 <option value="auto" selected>
                                     Próximo horário livre (@proximoSlotPadrao.ToString("dd/MM HH:mm"))
                                 </option>
+                                <option value="dias_semana">Escolher Dia(s) da Semana + Horário</option>
                                 <option value="manual">Escolher data e hora específica</option>
                             </select>
                         </div>
@@ -513,6 +544,38 @@ else
                                    type="datetime-local"
                                    value="@proximoSlotPadrao.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture)" />
                         </div>
+
+                        <div class="field" id="campoHorarioDiaSemanaPost" style="display:none;">
+                            <label for="postHorarioDiaSemana">Horário nos dias escolhidos (HH:mm)</label>
+                            <input id="postHorarioDiaSemana"
+                                   name="horarioDiaSemanaPost"
+                                   type="time"
+                                   value="@proximoSlotPadrao.ToString("HH:mm", CultureInfo.InvariantCulture)" />
+                        </div>
+                    </div>
+
+                    <div class="field" id="blocoDiasSemanaPost" style="display:none;margin-top:12px;">
+                        <label>Escolha em qual(is) dia(s) da semana deseja agendar esta publicação:</label>
+                        <div class="days-grid">
+                            @{
+                                var nomesDias = new (int Valor, string Nome)[]
+                                {
+                                    (1, "Segunda"), (2, "Terça"), (3, "Quarta"), (4, "Quinta"), (5, "Sexta"), (6, "Sábado"), (0, "Domingo")
+                                };
+                                var hojeDow = (int)Model.AgoraSaoPaulo.DayOfWeek;
+                            }
+                            @foreach (var d in nomesDias)
+                            {
+                                <label class="day-chip">
+                                    <input type="checkbox"
+                                           name="diasSemanaPost"
+                                           value="@d.Valor"
+                                           @(d.Valor == hojeDow ? "checked" : null) />
+                                    <span>@d.Nome</span>
+                                </label>
+                            }
+                        </div>
+                        <small>Se marcar mais de um dia (ex.: Segunda, Quarta e Sexta), o sistema agenda automaticamente para cada um desses dias.</small>
                     </div>
 
                     <div class="field" style="margin-top:14px;">
@@ -595,7 +658,7 @@ else
                         <label for="storyModo">Frequência de publicação</label>
                         <select id="storyModo" name="modoAgendamento">
                             <option value="@ModoStoryRecorrente.RecorrenteDiario" selected>
-                                Todo dia automaticamente nos horários programados
+                                Recorrente nos dias da semana e horários escolhidos
                             </option>
                             <option value="@ModoStoryRecorrente.UnicaVez">
                                 Apenas uma vez na data e hora escolhida
@@ -604,12 +667,26 @@ else
                     </div>
 
                     <div class="field" id="campoHorariosStory">
-                        <label for="storyHorarios">Horários diários do Story (HH:mm)</label>
+                        <label for="storyHorarios">Horários do Story (HH:mm)</label>
                         <input id="storyHorarios"
                                name="horariosDiarios"
                                type="text"
                                value="10:00, 19:00"
                                placeholder="10:00, 15:00, 20:00" />
+                    </div>
+
+                    <div class="field" id="campoDiasSemanaStory" style="grid-column:1 / -1;">
+                        <label>Em quais Dias da Semana este Story deve ser postado?</label>
+                        <div class="days-grid">
+                            @foreach (var d in new (int Valor, string Nome)[] { (1, "Seg"), (2, "Ter"), (3, "Qua"), (4, "Qui"), (5, "Sex"), (6, "Sáb"), (0, "Dom") })
+                            {
+                                <label class="day-chip">
+                                    <input type="checkbox" name="diasSemana" value="@d.Valor" checked />
+                                    <span>@d.Nome</span>
+                                </label>
+                            }
+                        </div>
+                        <small>Deixe todos marcados para postar todos os dias, ou marque apenas os dias da semana desejados.</small>
                     </div>
 
                     <div class="field" id="campoDataUnicaStory" style="display:none;">
@@ -635,12 +712,14 @@ else
                 @foreach (var story in Model.StoriesRecorrentes)
                 {
                     var horariosTexto = Model.ObterHorariosStoryTexto(story);
+                    var diasStory = InstagramAgendadorService.DeserializarDiasSemana(story.DiasSemanaJson);
+                    var resumoDiasStory = InstagramAgendadorService.FormatarDiasSemanaResumo(story.DiasSemanaJson);
                     <div class="queue-item">
                         <div>
                             <img src="/media/story/@(story.Id).jpg?v=@(story.CriadoEmUtc.UtcTicks)"
-                                 alt="@story.Titulo"
-                                 style="width:96px;height:170px;object-fit:cover;border-radius:9px;border:1px solid var(--border);"
-                                 loading="lazy" />
+                                  alt="@story.Titulo"
+                                  style="width:96px;height:170px;object-fit:cover;border-radius:9px;border:1px solid var(--border);"
+                                  loading="lazy" />
                         </div>
 
                         <div>
@@ -648,8 +727,9 @@ else
                                 <div>
                                     <strong style="font-size:14px;color:#fff;">Story #@story.Id — @story.Titulo</strong>
                                     <span class="pill agendado" style="margin-left:8px;">@story.IdentificadorInstagram</span>
+                                    <span class="pill cancelado" style="margin-left:4px;">📅 @resumoDiasStory</span>
                                     <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">
-                                        Próximo disparo: <strong style="color:#fff;">@story.ProximoDisparoLocal.ToString("dd/MM/yyyy 'às' HH:mm", cultura)</strong>
+                                        Próximo disparo: <strong style="color:#fff;">@story.ProximoDisparoLocal.ToString("ddd, dd/MM/yyyy 'às' HH:mm", cultura)</strong>
                                         · Total enviado: <strong>@story.TotalPublicacoes vez(es)</strong>
                                     </div>
                                 </div>
@@ -712,6 +792,21 @@ else
                                     <div class="field">
                                         <label>Trocar arte (opcional)</label>
                                         <input type="file" name="novaImagemStory" accept="image/jpeg,image/png,image/webp" />
+                                    </div>
+                                    <div class="field" style="grid-column:1 / -1;">
+                                        <label>Dias da Semana deste Story</label>
+                                        <div class="days-grid">
+                                            @foreach (var d in new (int Valor, string Nome)[] { (1, "Seg"), (2, "Ter"), (3, "Qua"), (4, "Qui"), (5, "Sex"), (6, "Sáb"), (0, "Dom") })
+                                            {
+                                                <label class="day-chip">
+                                                    <input type="checkbox"
+                                                           name="diasSemana"
+                                                           value="@d.Valor"
+                                                           @(diasStory.Contains(d.Valor) ? "checked" : null) />
+                                                    <span>@d.Nome</span>
+                                                </label>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
 
@@ -918,9 +1013,14 @@ else
     (() => {
         const postModoHorario = document.getElementById("postModoHorario");
         const campoHorarioManualPost = document.getElementById("campoHorarioManualPost");
-        if (postModoHorario && campoHorarioManualPost) {
+        const campoHorarioDiaSemanaPost = document.getElementById("campoHorarioDiaSemanaPost");
+        const blocoDiasSemanaPost = document.getElementById("blocoDiasSemanaPost");
+        if (postModoHorario) {
             const togglePostHorario = () => {
-                campoHorarioManualPost.style.display = postModoHorario.value === "manual" ? "flex" : "none";
+                const val = postModoHorario.value;
+                if (campoHorarioManualPost) campoHorarioManualPost.style.display = val === "manual" ? "flex" : "none";
+                if (campoHorarioDiaSemanaPost) campoHorarioDiaSemanaPost.style.display = val === "dias_semana" ? "flex" : "none";
+                if (blocoDiasSemanaPost) blocoDiasSemanaPost.style.display = val === "dias_semana" ? "flex" : "none";
             };
             postModoHorario.addEventListener("change", togglePostHorario);
             togglePostHorario();
@@ -970,11 +1070,13 @@ else
 
         const storyModo = document.getElementById("storyModo");
         const campoHorariosStory = document.getElementById("campoHorariosStory");
+        const campoDiasSemanaStory = document.getElementById("campoDiasSemanaStory");
         const campoDataUnicaStory = document.getElementById("campoDataUnicaStory");
         if (storyModo && campoHorariosStory && campoDataUnicaStory) {
             const toggleStoryModo = () => {
                 const unica = storyModo.value === "@ModoStoryRecorrente.UnicaVez";
                 campoHorariosStory.style.display = unica ? "none" : "flex";
+                if (campoDiasSemanaStory) campoDiasSemanaStory.style.display = unica ? "none" : "flex";
                 campoDataUnicaStory.style.display = unica ? "flex" : "none";
             };
             storyModo.addEventListener("change", toggleStoryModo);

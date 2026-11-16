@@ -50,6 +50,8 @@ public sealed class IndexModel : PageModel
         [FromForm] string tipoPublicacao,
         [FromForm] string modoHorario,
         [FromForm] string? horarioEspecificoLocal,
+        [FromForm] int[]? diasSemanaPost,
+        [FromForm] string? horarioDiaSemanaPost,
         [FromForm] string? urlImagemExterna,
         [FromForm] IFormFile? arquivoImagem,
         [FromForm] bool publicarImediatamente,
@@ -66,6 +68,47 @@ public sealed class IndexModel : PageModel
                 await arquivoImagem.CopyToAsync(ms, cancellationToken);
                 bytesImagem = ms.ToArray();
                 contentType = arquivoImagem.ContentType;
+            }
+
+            if (string.Equals(modoHorario, "dias_semana", StringComparison.OrdinalIgnoreCase))
+            {
+                if (diasSemanaPost is null || diasSemanaPost.Length == 0)
+                {
+                    throw new ArgumentException("Selecione pelo menos um dia da semana para o agendamento.");
+                }
+
+                var datasCalculadas = InstagramAgendadorService.CalcularDatasParaDiasDaSemana(
+                    diasSemanaPost,
+                    horarioDiaSemanaPost,
+                    AgoraSaoPaulo);
+
+                if (datasCalculadas.Count == 0)
+                {
+                    throw new ArgumentException("Não foi possível calcular as próximas datas para os dias da semana selecionados.");
+                }
+
+                InstagramPostAgendado? primeiroPost = null;
+                foreach (var dataSlot in datasCalculadas)
+                {
+                    var criado = await _agendadorService.CriarPostAgendadoAsync(
+                        instagramContaId,
+                        titulo,
+                        legenda,
+                        tipoPublicacao,
+                        bytesImagem,
+                        contentType,
+                        urlImagemExterna,
+                        dataSlot,
+                        ObterBaseUrlPublica(),
+                        cancellationToken);
+                    primeiroPost ??= criado;
+                }
+
+                var resumoDatas = string.Join(", ", datasCalculadas.Select(d => d.ToString("ddd dd/MM 'às' HH:mm", CultureInfo.GetCultureInfo("pt-BR"))));
+                TempData["Mensagem"] =
+                    $"{datasCalculadas.Count} publicação(ões) '{primeiroPost!.Titulo}' agendada(s) nos dias da semana escolhidos para {primeiroPost.IdentificadorInstagram}: {resumoDatas}.";
+
+                return RedirectToPage(new { ContaId = instagramContaId });
             }
 
             DateTime? horarioEscolhido = null;
@@ -250,6 +293,7 @@ public sealed class IndexModel : PageModel
         [FromForm] string titulo,
         [FromForm] string modoAgendamento,
         [FromForm] string? horariosDiarios,
+        [FromForm] int[]? diasSemana,
         [FromForm] string? dataHoraUnicaLocal,
         [FromForm] IFormFile? imagemStory,
         CancellationToken cancellationToken)
@@ -290,10 +334,11 @@ public sealed class IndexModel : PageModel
                 horariosDiarios,
                 dataHoraUnica,
                 ObterBaseUrlPublica(),
+                diasSemana,
                 cancellationToken);
 
             TempData["Mensagem"] =
-                $"Story '{story.Titulo}' programado para {story.IdentificadorInstagram}! Próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm}.";
+                $"Story '{story.Titulo}' programado para {story.IdentificadorInstagram} ({InstagramAgendadorService.FormatarDiasSemanaResumo(story.DiasSemanaJson)})! Próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm}.";
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -310,6 +355,7 @@ public sealed class IndexModel : PageModel
         [FromForm] string titulo,
         [FromForm] string modoAgendamento,
         [FromForm] string? horariosDiarios,
+        [FromForm] int[]? diasSemana,
         [FromForm] string? dataHoraUnicaLocal,
         [FromForm] IFormFile? novaImagemStory,
         CancellationToken cancellationToken)
@@ -352,6 +398,7 @@ public sealed class IndexModel : PageModel
                 novosBytes,
                 novoContentType,
                 ObterBaseUrlPublica(),
+                diasSemana,
                 cancellationToken);
 
             TempData["Mensagem"] = $"Story programado #{storyId} atualizado.";
@@ -532,6 +579,7 @@ public sealed class IndexModel : PageModel
                 BaseUrlPublica = s.BaseUrlPublica,
                 ModoAgendamento = s.ModoAgendamento,
                 HorariosDiariosJson = s.HorariosDiariosJson,
+                DiasSemanaJson = s.DiasSemanaJson,
                 DataHoraUnicaLocal = s.DataHoraUnicaLocal,
                 ProximoDisparoLocal = s.ProximoDisparoLocal,
                 ProximoDisparoUtc = s.ProximoDisparoUtc,

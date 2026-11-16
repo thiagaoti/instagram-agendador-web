@@ -48,6 +48,10 @@ public class InstagramStoryRecorrente
     [StringLength(500)]
     public string HorariosDiariosJson { get; set; } = "[\"10:00\",\"19:00\"]";
 
+    [Required]
+    [StringLength(150)]
+    public string DiasSemanaJson { get; set; } = "[0,1,2,3,4,5,6]";
+
     public DateTime? DataHoraUnicaLocal { get; set; }
 
     public DateTime ProximoDisparoLocal { get; set; }

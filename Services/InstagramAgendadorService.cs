@@ -69,6 +69,28 @@ public sealed class InstagramAgendadorService
                 {
                     // Coluna já existe
                 }
+
+                try
+                {
+                    await db.Database.ExecuteSqlRawAsync(
+                        """ALTER TABLE "IgSistema_ContasInstagram" ADD COLUMN "DiasSemanaJson" TEXT NOT NULL DEFAULT '[0,1,2,3,4,5,6]';""",
+                        cancellationToken);
+                }
+                catch
+                {
+                    // Coluna já existe
+                }
+
+                try
+                {
+                    await db.Database.ExecuteSqlRawAsync(
+                        """ALTER TABLE "IgSistema_StoriesRecorrentes" ADD COLUMN "DiasSemanaJson" TEXT NOT NULL DEFAULT '[0,1,2,3,4,5,6]';""",
+                        cancellationToken);
+                }
+                catch
+                {
+                    // Coluna já existe
+                }
             }
             else
             {
@@ -92,6 +114,7 @@ public sealed class InstagramAgendadorService
                         "BaseUrlPublica" character varying(500) NULL,
                         "HorariosFeedJson" character varying(500) NOT NULL DEFAULT '["09:00","13:00","18:00"]',
                         "HorariosStoryJson" character varying(500) NOT NULL DEFAULT '["10:00","19:00"]',
+                        "DiasSemanaJson" character varying(150) NOT NULL DEFAULT '[0,1,2,3,4,5,6]',
                         "PublicacaoAutomaticaAtiva" boolean NOT NULL DEFAULT TRUE,
                         "Ativo" boolean NOT NULL DEFAULT TRUE,
                         "Padrao" boolean NOT NULL DEFAULT FALSE,
@@ -105,6 +128,8 @@ public sealed class InstagramAgendadorService
                         ADD COLUMN IF NOT EXISTS "UsuarioAcessoId" integer NULL;
                     ALTER TABLE "IgSistema_ContasInstagram"
                         ADD COLUMN IF NOT EXISTS "LoginUsuarioVinculado" character varying(250) NULL;
+                    ALTER TABLE "IgSistema_ContasInstagram"
+                        ADD COLUMN IF NOT EXISTS "DiasSemanaJson" character varying(150) NOT NULL DEFAULT '[0,1,2,3,4,5,6]';
                     ALTER TABLE "IgSistema_ContasInstagram"
                         ALTER COLUMN "LoginUsuarioVinculado" TYPE character varying(250);
                     ALTER TABLE "IgSistema_ContasInstagram"
@@ -159,6 +184,7 @@ public sealed class InstagramAgendadorService
                         "BaseUrlPublica" character varying(500) NULL,
                         "ModoAgendamento" character varying(30) NOT NULL DEFAULT 'RecorrenteDiario',
                         "HorariosDiariosJson" character varying(500) NOT NULL DEFAULT '["10:00","19:00"]',
+                        "DiasSemanaJson" character varying(150) NOT NULL DEFAULT '[0,1,2,3,4,5,6]',
                         "DataHoraUnicaLocal" timestamp without time zone NULL,
                         "ProximoDisparoLocal" timestamp without time zone NOT NULL,
                         "ProximoDisparoUtc" timestamp with time zone NOT NULL,
@@ -171,6 +197,9 @@ public sealed class InstagramAgendadorService
                         "UltimaPublicacaoEmUtc" timestamp with time zone NULL,
                         "CriadoEmUtc" timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
+
+                    ALTER TABLE "IgSistema_StoriesRecorrentes"
+                        ADD COLUMN IF NOT EXISTS "DiasSemanaJson" character varying(150) NOT NULL DEFAULT '[0,1,2,3,4,5,6]';
 
                     CREATE INDEX IF NOT EXISTS "IX_IgSistema_StoriesRecorrentes_Fila"
                         ON "IgSistema_StoriesRecorrentes" ("InstagramContaId", "Ativo", "ProximoDisparoUtc");
@@ -976,6 +1005,7 @@ public sealed class InstagramAgendadorService
         string? horariosDiariosTexto,
         DateTime? dataHoraUnicaLocal,
         string baseUrlPublica,
+        IEnumerable<int>? diasSemana = null,
         CancellationToken cancellationToken = default)
     {
         await GarantirBancoInicializadoAsync(cancellationToken);
@@ -1005,6 +1035,7 @@ public sealed class InstagramAgendadorService
             : ModoStoryRecorrente.RecorrenteDiario;
 
         var horarios = NormalizarHorarios([horariosDiariosTexto ?? string.Empty]);
+        var diasPermitidos = NormalizarDiasSemana(diasSemana);
         DateTime proximoDisparoLocal;
 
         if (modo == ModoStoryRecorrente.RecorrenteDiario)
@@ -1016,7 +1047,8 @@ public sealed class InstagramAgendadorService
 
             proximoDisparoLocal = CalcularProximoHorarioDiarioLocal(
                 horarios,
-                FusoHorarioService.AgoraLocal.DateTime);
+                FusoHorarioService.AgoraLocal.DateTime,
+                diasPermitidos);
         }
         else
         {
@@ -1042,6 +1074,7 @@ public sealed class InstagramAgendadorService
             BaseUrlPublica = baseUrlPublica?.Trim().TrimEnd('/'),
             ModoAgendamento = modo,
             HorariosDiariosJson = JsonSerializer.Serialize(horarios),
+            DiasSemanaJson = JsonSerializer.Serialize(diasPermitidos),
             DataHoraUnicaLocal = modo == ModoStoryRecorrente.UnicaVez ? proximoDisparoLocal : null,
             ProximoDisparoLocal = proximoDisparoLocal,
             ProximoDisparoUtc = FusoHorarioService.ConverterParaUtc(proximoDisparoLocal),
@@ -1066,6 +1099,7 @@ public sealed class InstagramAgendadorService
         byte[]? novaImagem,
         string? novoContentType,
         string? baseUrlPublica,
+        IEnumerable<int>? diasSemana = null,
         CancellationToken cancellationToken = default)
     {
         await GarantirBancoInicializadoAsync(cancellationToken);
@@ -1085,6 +1119,10 @@ public sealed class InstagramAgendadorService
             : ModoStoryRecorrente.RecorrenteDiario;
 
         var horarios = NormalizarHorarios([horariosDiariosTexto ?? string.Empty]);
+        var diasPermitidos = diasSemana is not null
+            ? NormalizarDiasSemana(diasSemana)
+            : DeserializarDiasSemana(story.DiasSemanaJson);
+
         DateTime proximoDisparoLocal;
 
         if (modo == ModoStoryRecorrente.RecorrenteDiario)
@@ -1096,7 +1134,8 @@ public sealed class InstagramAgendadorService
 
             proximoDisparoLocal = CalcularProximoHorarioDiarioLocal(
                 horarios,
-                FusoHorarioService.AgoraLocal.DateTime);
+                FusoHorarioService.AgoraLocal.DateTime,
+                diasPermitidos);
         }
         else
         {
@@ -1132,6 +1171,7 @@ public sealed class InstagramAgendadorService
 
         story.ModoAgendamento = modo;
         story.HorariosDiariosJson = JsonSerializer.Serialize(horarios);
+        story.DiasSemanaJson = JsonSerializer.Serialize(diasPermitidos);
         story.DataHoraUnicaLocal = modo == ModoStoryRecorrente.UnicaVez ? proximoDisparoLocal : null;
         story.ProximoDisparoLocal = proximoDisparoLocal;
         story.ProximoDisparoUtc = FusoHorarioService.ConverterParaUtc(proximoDisparoLocal);
@@ -1162,9 +1202,11 @@ public sealed class InstagramAgendadorService
             if (story.ModoAgendamento == ModoStoryRecorrente.RecorrenteDiario)
             {
                 var horarios = DeserializarHorarios(story.HorariosDiariosJson, ["10:00", "19:00"]);
+                var dias = DeserializarDiasSemana(story.DiasSemanaJson);
                 story.ProximoDisparoLocal = CalcularProximoHorarioDiarioLocal(
                     horarios,
-                    FusoHorarioService.AgoraLocal.DateTime);
+                    FusoHorarioService.AgoraLocal.DateTime,
+                    dias);
                 story.ProximoDisparoUtc = FusoHorarioService.ConverterParaUtc(story.ProximoDisparoLocal);
             }
         }
@@ -1463,9 +1505,11 @@ public sealed class InstagramAgendadorService
             if (story.ModoAgendamento == ModoStoryRecorrente.RecorrenteDiario)
             {
                 var horarios = DeserializarHorarios(story.HorariosDiariosJson, ["10:00", "19:00"]);
+                var dias = DeserializarDiasSemana(story.DiasSemanaJson);
                 story.ProximoDisparoLocal = CalcularProximoHorarioDiarioLocal(
                     horarios,
-                    agoraLocal.AddMinutes(1));
+                    agoraLocal.AddMinutes(1),
+                    dias);
                 story.ProximoDisparoUtc = FusoHorarioService.ConverterParaUtc(story.ProximoDisparoLocal);
                 story.Ativo = true;
                 story.Status = StatusStoryRecorrente.Ativo;
@@ -1491,9 +1535,11 @@ public sealed class InstagramAgendadorService
                 if (story.ModoAgendamento == ModoStoryRecorrente.RecorrenteDiario)
                 {
                     var horarios = DeserializarHorarios(story.HorariosDiariosJson, ["10:00", "19:00"]);
+                    var dias = DeserializarDiasSemana(story.DiasSemanaJson);
                     story.ProximoDisparoLocal = CalcularProximoHorarioDiarioLocal(
                         horarios,
-                        agoraLocal.AddMinutes(2));
+                        agoraLocal.AddMinutes(2),
+                        dias);
                     story.ProximoDisparoUtc = FusoHorarioService.ConverterParaUtc(story.ProximoDisparoLocal);
                     story.TentativasNoHorarioAtual = 0;
                 }
@@ -1591,9 +1637,103 @@ public sealed class InstagramAgendadorService
             .ToList();
     }
 
+    public static List<int> DeserializarDiasSemana(string? json)
+    {
+        if (!string.IsNullOrWhiteSpace(json))
+        {
+            try
+            {
+                var lista = JsonSerializer.Deserialize<List<int>>(json);
+                return NormalizarDiasSemana(lista);
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return [0, 1, 2, 3, 4, 5, 6];
+    }
+
+    public static List<int> NormalizarDiasSemana(IEnumerable<int>? dias)
+    {
+        var validos = (dias ?? [])
+            .Where(d => d is >= 0 and <= 6)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+
+        return validos.Count > 0 ? validos : [0, 1, 2, 3, 4, 5, 6];
+    }
+
+    public static string FormatarDiasSemanaResumo(string? json)
+    {
+        var dias = DeserializarDiasSemana(json);
+        if (dias.Count >= 7)
+        {
+            return "Todos os dias";
+        }
+
+        string NomeCurto(int d) => d switch
+        {
+            0 => "Dom",
+            1 => "Seg",
+            2 => "Ter",
+            3 => "Qua",
+            4 => "Qui",
+            5 => "Sex",
+            6 => "Sáb",
+            _ => ""
+        };
+
+        return string.Join(", ", dias.Select(NomeCurto));
+    }
+
+    public static List<DateTime> CalcularDatasParaDiasDaSemana(
+        IEnumerable<int> diasSemanaEscolhidos,
+        string? horarioTexto,
+        DateTime referenciaLocal)
+    {
+        var dias = NormalizarDiasSemana(diasSemanaEscolhidos);
+        if (!TimeOnly.TryParseExact(
+                (horarioTexto ?? "10:00").Trim(),
+                "HH:mm",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var hora))
+        {
+            hora = new TimeOnly(10, 0);
+        }
+
+        var datas = new List<DateTime>();
+        var dataCursor = DateOnly.FromDateTime(referenciaLocal);
+
+        for (var diaOffset = 0; diaOffset <= 7; diaOffset++)
+        {
+            var data = dataCursor.AddDays(diaOffset);
+            var dow = (int)data.DayOfWeek;
+            if (!dias.Contains(dow))
+            {
+                continue;
+            }
+
+            var candidato = DateTime.SpecifyKind(data.ToDateTime(hora), DateTimeKind.Unspecified);
+            if (candidato > referenciaLocal.AddMinutes(1))
+            {
+                datas.Add(candidato);
+                if (datas.Count >= dias.Count)
+                {
+                    break;
+                }
+            }
+        }
+
+        return datas.OrderBy(d => d).ToList();
+    }
+
     private static DateTime CalcularProximoHorarioDiarioLocal(
         IReadOnlyList<string> horariosTexto,
-        DateTime referenciaLocal)
+        DateTime referenciaLocal,
+        IReadOnlyList<int>? diasSemanaPermitidos = null)
     {
         var horarios = horariosTexto
             .Select(h => TimeOnly.TryParseExact(h, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var t) ? (TimeOnly?)t : null)
@@ -1607,10 +1747,16 @@ public sealed class InstagramAgendadorService
             horarios = [new TimeOnly(10, 0), new TimeOnly(19, 0)];
         }
 
+        var diasValidos = NormalizarDiasSemana(diasSemanaPermitidos);
         var dataCursor = DateOnly.FromDateTime(referenciaLocal);
-        for (var diaOffset = 0; diaOffset < 7; diaOffset++)
+        for (var diaOffset = 0; diaOffset <= 8; diaOffset++)
         {
             var data = dataCursor.AddDays(diaOffset);
+            if (!diasValidos.Contains((int)data.DayOfWeek))
+            {
+                continue;
+            }
+
             foreach (var hora in horarios)
             {
                 var candidato = DateTime.SpecifyKind(data.ToDateTime(hora), DateTimeKind.Unspecified);
