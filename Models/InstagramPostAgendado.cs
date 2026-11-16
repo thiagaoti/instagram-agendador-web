@@ -54,6 +54,14 @@ public class InstagramPostAgendado
 
     public DateTimeOffset HorarioProgramadoUtc { get; set; }
 
+    public bool RecorrenteSemanal { get; set; }
+
+    [StringLength(150)]
+    public string? DiasSemanaJson { get; set; }
+
+    [StringLength(50)]
+    public string? HorarioFixoSemanal { get; set; }
+
     [Required]
     [StringLength(30)]
     public string Status { get; set; } = StatusPostInstagram.Agendado;

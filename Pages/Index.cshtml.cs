@@ -77,36 +77,24 @@ public sealed class IndexModel : PageModel
                     throw new ArgumentException("Selecione pelo menos um dia da semana para o agendamento.");
                 }
 
-                var datasCalculadas = InstagramAgendadorService.CalcularDatasParaDiasDaSemana(
-                    diasSemanaPost,
-                    horarioDiaSemanaPost,
-                    AgoraSaoPaulo);
+                var postSemanal = await _agendadorService.CriarPostAgendadoAsync(
+                    instagramContaId,
+                    titulo,
+                    legenda,
+                    tipoPublicacao,
+                    bytesImagem,
+                    contentType,
+                    urlImagemExterna,
+                    horarioEscolhidoLocal: null,
+                    ObterBaseUrlPublica(),
+                    recorrenteSemanal: true,
+                    diasSemana: diasSemanaPost,
+                    horarioFixoSemanal: horarioDiaSemanaPost,
+                    cancellationToken: cancellationToken);
 
-                if (datasCalculadas.Count == 0)
-                {
-                    throw new ArgumentException("Não foi possível calcular as próximas datas para os dias da semana selecionados.");
-                }
-
-                InstagramPostAgendado? primeiroPost = null;
-                foreach (var dataSlot in datasCalculadas)
-                {
-                    var criado = await _agendadorService.CriarPostAgendadoAsync(
-                        instagramContaId,
-                        titulo,
-                        legenda,
-                        tipoPublicacao,
-                        bytesImagem,
-                        contentType,
-                        urlImagemExterna,
-                        dataSlot,
-                        ObterBaseUrlPublica(),
-                        cancellationToken);
-                    primeiroPost ??= criado;
-                }
-
-                var resumoDatas = string.Join(", ", datasCalculadas.Select(d => d.ToString("ddd dd/MM 'às' HH:mm", CultureInfo.GetCultureInfo("pt-BR"))));
+                var diasTexto = InstagramAgendadorService.FormatarDiasSemanaResumo(postSemanal.DiasSemanaJson);
                 TempData["Mensagem"] =
-                    $"{datasCalculadas.Count} publicação(ões) '{primeiroPost!.Titulo}' agendada(s) nos dias da semana escolhidos para {primeiroPost.IdentificadorInstagram}: {resumoDatas}.";
+                    $"Publicação semanal '{postSemanal.Titulo}' programada para repetir toda semana em [{diasTexto}] às {postSemanal.HorarioFixoSemanal} para {postSemanal.IdentificadorInstagram}! Próximo disparo: {postSemanal.HorarioProgramadoLocal:dd/MM/yyyy 'às' HH:mm}.";
 
                 return RedirectToPage(new { ContaId = instagramContaId });
             }
@@ -137,7 +125,7 @@ public sealed class IndexModel : PageModel
                 urlImagemExterna,
                 horarioEscolhido,
                 ObterBaseUrlPublica(),
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             if (publicarImediatamente)
             {
@@ -552,6 +540,9 @@ public sealed class IndexModel : PageModel
                 BaseUrlPublica = p.BaseUrlPublica,
                 HorarioProgramadoLocal = p.HorarioProgramadoLocal,
                 HorarioProgramadoUtc = p.HorarioProgramadoUtc,
+                RecorrenteSemanal = p.RecorrenteSemanal,
+                DiasSemanaJson = p.DiasSemanaJson,
+                HorarioFixoSemanal = p.HorarioFixoSemanal,
                 Status = p.Status,
                 CreationIdMeta = p.CreationIdMeta,
                 MediaIdMeta = p.MediaIdMeta,

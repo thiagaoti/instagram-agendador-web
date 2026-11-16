@@ -532,8 +532,8 @@ else
                                 <option value="auto" selected>
                                     Próximo horário livre (@proximoSlotPadrao.ToString("dd/MM HH:mm"))
                                 </option>
-                                <option value="dias_semana">Escolher Dia(s) da Semana + Horário</option>
-                                <option value="manual">Escolher data e hora específica</option>
+                                <option value="dias_semana">Repetir toda semana no(s) Dia(s) da Semana + Horário</option>
+                                <option value="manual">Escolher data e hora específica (1 vez)</option>
                             </select>
                         </div>
 
@@ -890,6 +890,12 @@ else
                                     <strong style="font-size:14px;color:#fff;">#@post.Id — @post.Titulo</strong>
                                     <span class="pill agendado" style="margin-left:8px;">@post.IdentificadorInstagram</span>
                                     <span class="pill cancelado" style="margin-left:4px;">@post.TipoPublicacao</span>
+                                    @if (post.RecorrenteSemanal)
+                                    {
+                                        <span class="pill publicado" style="margin-left:4px;">
+                                            🔁 Toda semana: @InstagramAgendadorService.FormatarDiasSemanaResumo(post.DiasSemanaJson) às @(post.HorarioFixoSemanal ?? post.HorarioProgramadoLocal.ToString("HH:mm"))
+                                        </span>
+                                    }
                                     <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">
                                         Programado para: <strong style="color:#fff;">@post.HorarioProgramadoLocal.ToString("dd/MM/yyyy 'às' HH:mm", cultura)</strong>
                                         @if (!string.IsNullOrWhiteSpace(post.MediaIdMeta))
