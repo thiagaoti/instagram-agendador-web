@@ -158,6 +158,54 @@ app.MapGet("/media/story/{id:int}.jpg", async (
     return Results.File(story.ConteudoImagem, contentType);
 }).AllowAnonymous();
 
+app.MapPost("/api/meta/descobrir-contas", async (
+    HttpContext httpContext,
+    InstagramGraphApiService graphApiService,
+    IConfiguration configuration,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        using var doc = await System.Text.Json.JsonDocument.ParseAsync(
+            httpContext.Request.Body,
+            cancellationToken: cancellationToken);
+        var root = doc.RootElement;
+
+        var accessToken = root.TryGetProperty("accessToken", out var tProp) ? tProp.GetString() : null;
+        var appId = root.TryGetProperty("appId", out var idProp) ? idProp.GetString() : null;
+        var appSecret = root.TryGetProperty("appSecret", out var secProp) ? secProp.GetString() : null;
+
+        if (string.IsNullOrWhiteSpace(appId))
+        {
+            appId = configuration["Meta:AppId"] ?? Environment.GetEnvironmentVariable("META__APPID");
+        }
+        if (string.IsNullOrWhiteSpace(appSecret))
+        {
+            appSecret = configuration["Meta:AppSecret"] ?? Environment.GetEnvironmentVariable("META__APPSECRET");
+        }
+
+        var contas = await graphApiService.DescobrirContasPorTokenAsync(
+            accessToken ?? string.Empty,
+            appId,
+            appSecret,
+            cancellationToken);
+
+        return Results.Ok(new
+        {
+            sucesso = true,
+            contas
+        });
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        return Results.BadRequest(new
+        {
+            sucesso = false,
+            erro = ex.GetBaseException().Message
+        });
+    }
+});
+
 app.MapRazorPages();
 
 app.Run();

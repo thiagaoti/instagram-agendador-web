@@ -8,10 +8,17 @@ namespace InstagramAgendador.Web.Pages.Configuracoes;
 public sealed class IndexModel : PageModel
 {
     private readonly InstagramAgendadorService _agendadorService;
+    private readonly InstagramGraphApiService _graphApiService;
+    private readonly IConfiguration _configuration;
 
-    public IndexModel(InstagramAgendadorService agendadorService)
+    public IndexModel(
+        InstagramAgendadorService agendadorService,
+        InstagramGraphApiService graphApiService,
+        IConfiguration configuration)
     {
         _agendadorService = agendadorService;
+        _graphApiService = graphApiService;
+        _configuration = configuration;
     }
 
     public IReadOnlyList<InstagramContaCadastro> ContasInstagram { get; private set; } = [];
@@ -39,10 +46,12 @@ public sealed class IndexModel : PageModel
     public async Task<IActionResult> OnPostSalvarContaInstagramAsync(
         [FromForm] int? contaId,
         [FromForm] int? usuarioAcessoId,
-        [FromForm] string nomeCadastro,
-        [FromForm] string identificadorInstagram,
-        [FromForm] string accountIdMeta,
+        [FromForm] string? nomeCadastro,
+        [FromForm] string? identificadorInstagram,
+        [FromForm] string? accountIdMeta,
         [FromForm] string? accessTokenMeta,
+        [FromForm] string? metaAppId,
+        [FromForm] string? metaAppSecret,
         [FromForm] string? graphApiBaseUrl,
         [FromForm] string? baseUrlPublica,
         [FromForm] string? horariosFeed,
@@ -66,6 +75,48 @@ public sealed class IndexModel : PageModel
                 ? ObterBaseUrlPublica()
                 : baseUrlPublica;
 
+            // Se o Admin informou apenas o Access Token (ou usou o botão de busca automática) e deixou Account ID / @perfil vazios, descobre sozinho na Meta!
+            if (!string.IsNullOrWhiteSpace(accessTokenMeta) &&
+                (string.IsNullOrWhiteSpace(accountIdMeta) || string.IsNullOrWhiteSpace(identificadorInstagram) || !string.IsNullOrWhiteSpace(metaAppSecret)))
+            {
+                var appId = !string.IsNullOrWhiteSpace(metaAppId)
+                    ? metaAppId
+                    : _configuration["Meta:AppId"] ?? Environment.GetEnvironmentVariable("META__APPID");
+                var appSecret = !string.IsNullOrWhiteSpace(metaAppSecret)
+                    ? metaAppSecret
+                    : _configuration["Meta:AppSecret"] ?? Environment.GetEnvironmentVariable("META__APPSECRET");
+
+                var descobertas = await _graphApiService.DescobrirContasPorTokenAsync(
+                    accessTokenMeta,
+                    appId,
+                    appSecret,
+                    cancellationToken);
+
+                if (descobertas.Count > 0)
+                {
+                    var escolhida = !string.IsNullOrWhiteSpace(identificadorInstagram)
+                        ? descobertas.FirstOrDefault(d =>
+                              d.IdentificadorInstagram.Equals(
+                                  InstagramAgendadorService.NormalizarArrobaInstagram(identificadorInstagram),
+                                  StringComparison.OrdinalIgnoreCase)) ?? descobertas[0]
+                        : descobertas[0];
+
+                    if (string.IsNullOrWhiteSpace(accountIdMeta))
+                    {
+                        accountIdMeta = escolhida.AccountIdMeta;
+                    }
+                    if (string.IsNullOrWhiteSpace(identificadorInstagram))
+                    {
+                        identificadorInstagram = escolhida.IdentificadorInstagram;
+                    }
+                    if (string.IsNullOrWhiteSpace(nomeCadastro))
+                    {
+                        nomeCadastro = escolhida.NomeExibicao;
+                    }
+                    accessTokenMeta = escolhida.AccessTokenFinal;
+                }
+            }
+
             int? idUsuarioDestino = usuarioAcessoId is > 0 ? usuarioAcessoId : null;
             string msgUsuario = string.Empty;
 
@@ -75,7 +126,7 @@ public sealed class IndexModel : PageModel
                 !string.IsNullOrWhiteSpace(novoUsuarioSenha))
             {
                 var nomeUsr = string.IsNullOrWhiteSpace(novoUsuarioNome)
-                    ? nomeCadastro
+                    ? (nomeCadastro ?? identificadorInstagram ?? "Usuário")
                     : novoUsuarioNome;
 
                 var novoUsr = await _agendadorService.SalvarUsuarioAcessoAsync(
@@ -93,9 +144,9 @@ public sealed class IndexModel : PageModel
 
             var conta = await _agendadorService.SalvarContaInstagramAsync(
                 contaId,
-                nomeCadastro,
-                identificadorInstagram,
-                accountIdMeta,
+                nomeCadastro ?? identificadorInstagram ?? "Conta Instagram",
+                identificadorInstagram ?? string.Empty,
+                accountIdMeta ?? string.Empty,
                 accessTokenMeta,
                 graphApiBaseUrl,
                 urlBase,

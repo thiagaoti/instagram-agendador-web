@@ -15,6 +15,13 @@ public sealed record ResultadoTesteConexaoMeta(
     string? NomeContaRetornado,
     string Mensagem);
 
+public sealed record ContaInstagramDescoberta(
+    string AccountIdMeta,
+    string IdentificadorInstagram,
+    string NomeExibicao,
+    string AccessTokenFinal,
+    bool TokenConvertido60Dias);
+
 public sealed class InstagramGraphApiService
 {
     private readonly IHttpClientFactory _httpClientFactory;
@@ -78,6 +85,177 @@ public sealed class InstagramGraphApiService
         {
             return new ResultadoTesteConexaoMeta(false, null, null, $"Erro ao testar conexão: {ex.Message}");
         }
+    }
+
+    public async Task<IReadOnlyList<ContaInstagramDescoberta>> DescobrirContasPorTokenAsync(
+        string accessTokenBruto,
+        string? metaAppId = null,
+        string? metaAppSecret = null,
+        CancellationToken cancellationToken = default)
+    {
+        var token = (accessTokenBruto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new ArgumentException("Informe o Access Token para buscar as contas do Instagram.");
+        }
+
+        var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(30);
+
+        var baseUrl = ResolverBaseUrlMeta(null, token);
+        var tokenConvertido60Dias = false;
+
+        // Se for token Facebook (EAA...) e houver AppId + AppSecret, já converte automaticamente para Token de 60 dias!
+        if (!token.StartsWith("IGAA", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(metaAppId) &&
+            !string.IsNullOrWhiteSpace(metaAppSecret))
+        {
+            try
+            {
+                var urlTroca =
+                    $"{baseUrl}/oauth/access_token?grant_type=fb_exchange_token&client_id={Uri.EscapeDataString(metaAppId.Trim())}&client_secret={Uri.EscapeDataString(metaAppSecret.Trim())}&fb_exchange_token={Uri.EscapeDataString(token)}";
+                using var respTroca = await client.GetAsync(urlTroca, cancellationToken);
+                if (respTroca.IsSuccessStatusCode)
+                {
+                    var bodyTroca = await respTroca.Content.ReadAsStringAsync(cancellationToken);
+                    using var docTroca = JsonDocument.Parse(bodyTroca);
+                    if (docTroca.RootElement.TryGetProperty("access_token", out var novoTokenProp))
+                    {
+                        var novoTok = novoTokenProp.GetString();
+                        if (!string.IsNullOrWhiteSpace(novoTok))
+                        {
+                            token = novoTok;
+                            tokenConvertido60Dias = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Não foi possível converter para token de 60 dias; mantendo token original.");
+            }
+        }
+
+        var encontradas = new List<ContaInstagramDescoberta>();
+
+        // Caso 1: Token direto do Instagram Login (IGAA...)
+        if (token.StartsWith("IGAA", StringComparison.OrdinalIgnoreCase) ||
+            token.StartsWith("IGQ", StringComparison.OrdinalIgnoreCase))
+        {
+            var urlMeIg = $"{baseUrl}/me?fields=id,user_id,username,name&access_token={Uri.EscapeDataString(token)}";
+            using var respMe = await client.GetAsync(urlMeIg, cancellationToken);
+            var bodyMe = await respMe.Content.ReadAsStringAsync(cancellationToken);
+            if (!respMe.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException(ExtrairErroMeta(bodyMe, (int)respMe.StatusCode));
+            }
+
+            using var docMe = JsonDocument.Parse(bodyMe);
+            var root = docMe.RootElement;
+            var igId = root.TryGetProperty("user_id", out var uidProp) ? uidProp.GetString()
+                : root.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+            var username = root.TryGetProperty("username", out var uProp) ? uProp.GetString() : null;
+            var name = root.TryGetProperty("name", out var nProp) ? nProp.GetString() : null;
+
+            if (!string.IsNullOrWhiteSpace(igId))
+            {
+                var arroba = string.IsNullOrWhiteSpace(username) ? $"@ig_{igId}" : $"@{username.TrimStart('@')}";
+                encontradas.Add(new ContaInstagramDescoberta(
+                    AccountIdMeta: igId,
+                    IdentificadorInstagram: arroba,
+                    NomeExibicao: string.IsNullOrWhiteSpace(name) ? arroba : name,
+                    AccessTokenFinal: token,
+                    TokenConvertido60Dias: tokenConvertido60Dias));
+            }
+
+            return encontradas;
+        }
+
+        // Caso 2: Token Facebook Graph API (EAA...) -> varre todas as Páginas e extrai o instagram_business_account automaticamente
+        var urlAccounts =
+            $"{baseUrl}/me/accounts?fields=id,name,instagram_business_account{{id,username,name}}&limit=100&access_token={Uri.EscapeDataString(token)}";
+
+        using var respAcc = await client.GetAsync(urlAccounts, cancellationToken);
+        var bodyAcc = await respAcc.Content.ReadAsStringAsync(cancellationToken);
+        if (!respAcc.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(ExtrairErroMeta(bodyAcc, (int)respAcc.StatusCode));
+        }
+
+        using (var docAcc = JsonDocument.Parse(bodyAcc))
+        {
+            if (docAcc.RootElement.TryGetProperty("data", out var dataArr) &&
+                dataArr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var page in dataArr.EnumerateArray())
+                {
+                    if (!page.TryGetProperty("instagram_business_account", out var igObj) ||
+                        igObj.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var igId = igObj.TryGetProperty("id", out var idP) ? idP.GetString() : null;
+                    if (string.IsNullOrWhiteSpace(igId))
+                    {
+                        continue;
+                    }
+
+                    var igUser = igObj.TryGetProperty("username", out var uP) ? uP.GetString() : null;
+                    var igName = igObj.TryGetProperty("name", out var nP) ? nP.GetString() : null;
+                    var pageName = page.TryGetProperty("name", out var pnP) ? pnP.GetString() : null;
+
+                    var arroba = string.IsNullOrWhiteSpace(igUser) ? $"@ig_{igId}" : $"@{igUser.TrimStart('@')}";
+                    var nomeFinal = !string.IsNullOrWhiteSpace(igName)
+                        ? igName
+                        : !string.IsNullOrWhiteSpace(pageName)
+                            ? pageName
+                            : arroba;
+
+                    encontradas.Add(new ContaInstagramDescoberta(
+                        AccountIdMeta: igId,
+                        IdentificadorInstagram: arroba,
+                        NomeExibicao: nomeFinal,
+                        AccessTokenFinal: token,
+                        TokenConvertido60Dias: tokenConvertido60Dias));
+                }
+            }
+        }
+
+        return encontradas;
+    }
+
+    public async Task<string> TrocarCodigoOAuthPorTokenAsync(
+        string code,
+        string redirectUri,
+        string metaAppId,
+        string metaAppSecret,
+        CancellationToken cancellationToken = default)
+    {
+        var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(30);
+
+        var url =
+            $"https://graph.facebook.com/v21.0/oauth/access_token?client_id={Uri.EscapeDataString(metaAppId.Trim())}&redirect_uri={Uri.EscapeDataString(redirectUri)}&client_secret={Uri.EscapeDataString(metaAppSecret.Trim())}&code={Uri.EscapeDataString(code.Trim())}";
+
+        using var resp = await client.GetAsync(url, cancellationToken);
+        var body = await resp.Content.ReadAsStringAsync(cancellationToken);
+        if (!resp.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(ExtrairErroMeta(body, (int)resp.StatusCode));
+        }
+
+        using var doc = JsonDocument.Parse(body);
+        if (doc.RootElement.TryGetProperty("access_token", out var tokProp))
+        {
+            var tok = tokProp.GetString();
+            if (!string.IsNullOrWhiteSpace(tok))
+            {
+                return tok;
+            }
+        }
+
+        throw new InvalidOperationException("A Meta não retornou o access_token no callback OAuth.");
     }
 
     public Task<ResultadoPublicacaoMeta> PublicarFeedImagemAsync(

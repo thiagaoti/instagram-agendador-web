@@ -290,48 +290,89 @@
 
         <!-- Dados do Perfil do Instagram e Respectiva Configuração -->
         <div style="font-size:12px;font-weight:850;color:#ff4f8b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;">
-            Passo B — Perfil do Instagram e Respectiva Configuração (Meta Graph API & Horários)
+            Passo B — Perfil do Instagram e Respectiva Configuração (Busca Automática de ID + Token 60 Dias)
+        </div>
+
+        <!-- Assistente de Busca Automática pelo Token -->
+        <div style="margin-bottom:16px;padding:15px;background:#141b2d;border:1px solid #2e4372;border-radius:11px;">
+            <div style="font-size:12px;font-weight:850;color:#38bdf8;margin-bottom:6px;">
+                ⚡ Modo Prático: Não precisa procurar o Account ID nem o @@arroba manualmente!
+            </div>
+            <p style="margin:0 0 12px;font-size:12px;color:#b8c7e0;line-height:1.5;">
+                Cole apenas o <strong>Access Token</strong> abaixo e clique em <strong>"🔍 Buscar Instagrams deste Token"</strong> (ou simplesmente salve direto). Se preencher também o <em>App ID</em> e <em>App Secret</em> (opcional), o sistema já transforma o token em <strong>Token de 60 dias</strong> automaticamente!
+            </p>
+
+            <div class="cfg-grid">
+                <div class="cfg-field">
+                    <label for="novoAccessToken">1. Access Token (Meta Graph API)</label>
+                    <input id="novoAccessToken"
+                           name="accessTokenMeta"
+                           type="password"
+                           placeholder="Cole aqui o Token EAA... ou IGAA..."
+                           required />
+                    <small>Cole o token gerado ou do cliente.</small>
+                </div>
+
+                <div class="cfg-field">
+                    <label for="metaAppIdInput">Meta App ID (opcional — p/ gerar Token 60 dias)</label>
+                    <input id="metaAppIdInput"
+                           name="metaAppId"
+                           type="text"
+                           placeholder="Ex.: 123456789012345" />
+                    <small>Salvo automaticamente no seu navegador.</small>
+                </div>
+
+                <div class="cfg-field">
+                    <label for="metaAppSecretInput">Meta App Secret (opcional — p/ gerar Token 60 dias)</label>
+                    <input id="metaAppSecretInput"
+                           name="metaAppSecret"
+                           type="password"
+                           placeholder="Chave secreta do Aplicativo Meta" />
+                    <small>Se preenchido, converte o token curto p/ 60 dias sozinho.</small>
+                </div>
+
+                <div class="cfg-field" style="justify-content:flex-end;">
+                    <button type="button"
+                            id="btnDescobrirContasToken"
+                            class="cfg-btn cfg-btn-secondary"
+                            style="background:#1d3557;border-color:#38bdf8;color:#fff;min-height:40px;">
+                        🔍 Buscar @@Instagram e ID Sozinho
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultadoBuscaTokenBox" style="display:none;margin-top:12px;padding:12px;background:#0f1523;border:1px solid #334e85;border-radius:9px;">
+                <div id="resultadoBuscaTokenStatus" style="font-size:12px;font-weight:800;color:#93c5fd;margin-bottom:8px;"></div>
+                <div id="listaContasDescobertas" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+            </div>
         </div>
 
         <div class="cfg-grid">
             <div class="cfg-field">
-                <label for="novoArroba">Qual é o Instagram deste cadastro? (@@perfil)</label>
+                <label for="novoArroba">Qual é o Instagram deste cadastro? (@@perfil — preenchido sozinho se deixar vazio)</label>
                 <input id="novoArroba"
                        name="identificadorInstagram"
                        type="text"
-                       placeholder="Ex.: @@scooterachadinhos"
-                       required />
+                       placeholder="Preenchido automaticamente pelo Token (ou digite @@perfil)" />
                 <small>O @@ do perfil do Instagram vinculado.</small>
             </div>
 
             <div class="cfg-field">
-                <label for="novoNomeCadastro">Nome de Identificação do Perfil</label>
+                <label for="novoNomeCadastro">Nome de Identificação do Perfil (preenchido sozinho se deixar vazio)</label>
                 <input id="novoNomeCadastro"
                        name="nomeCadastro"
                        type="text"
-                       placeholder="Ex.: Instagram Oficial Cliente X"
-                       required />
+                       placeholder="Preenchido automaticamente pelo Token" />
                 <small>Nome exibido no painel.</small>
             </div>
 
             <div class="cfg-field">
-                <label for="novoAccountId">Instagram Account ID (Meta Graph API)</label>
+                <label for="novoAccountId">Instagram Account ID (preenchido sozinho se deixar vazio!)</label>
                 <input id="novoAccountId"
                        name="accountIdMeta"
                        type="text"
-                       placeholder="Ex.: 17841405829104921"
-                       required />
-                <small>ID da conta Instagram Business/Creator na Meta.</small>
-            </div>
-
-            <div class="cfg-field">
-                <label for="novoAccessToken">Access Token (Meta Graph API)</label>
-                <input id="novoAccessToken"
-                       name="accessTokenMeta"
-                       type="password"
-                       placeholder="EAABsbCS1iHgBO..."
-                       required />
-                <small>Token de acesso com permissão de publicação deste Instagram.</small>
+                       placeholder="Descoberto sozinho pelo Token (ex.: 178414...)" />
+                <small>Não precisa procurar! O sistema puxa sozinho pelo Token.</small>
             </div>
 
             <div class="cfg-field">
@@ -675,6 +716,110 @@
             };
             selectUsr.addEventListener("change", atualizar);
             atualizar();
+        }
+
+        const appIdInput = document.getElementById("metaAppIdInput");
+        const appSecretInput = document.getElementById("metaAppSecretInput");
+        try {
+            if (appIdInput) {
+                appIdInput.value = localStorage.getItem("agendador_meta_appid") || "";
+                appIdInput.addEventListener("change", () => localStorage.setItem("agendador_meta_appid", appIdInput.value.trim()));
+            }
+            if (appSecretInput) {
+                appSecretInput.value = localStorage.getItem("agendador_meta_appsecret") || "";
+                appSecretInput.addEventListener("change", () => localStorage.setItem("agendador_meta_appsecret", appSecretInput.value.trim()));
+            }
+        } catch { }
+
+        const btnDescobrir = document.getElementById("btnDescobrirContasToken");
+        const inputToken = document.getElementById("novoAccessToken");
+        const inputArroba = document.getElementById("novoArroba");
+        const inputNome = document.getElementById("novoNomeCadastro");
+        const inputAccountId = document.getElementById("novoAccountId");
+        const boxResultado = document.getElementById("resultadoBuscaTokenBox");
+        const statusResultado = document.getElementById("resultadoBuscaTokenStatus");
+        const listaContas = document.getElementById("listaContasDescobertas");
+
+        if (btnDescobrir && inputToken) {
+            btnDescobrir.addEventListener("click", async () => {
+                const accessToken = inputToken.value.trim();
+                if (!accessToken) {
+                    alert("Cole o Access Token primeiro para buscar os Instagrams vinculados.");
+                    inputToken.focus();
+                    return;
+                }
+
+                btnDescobrir.disabled = true;
+                btnDescobrir.textContent = "⏳ Buscando na Meta...";
+                if (boxResultado) boxResultado.style.display = "block";
+                if (statusResultado) statusResultado.textContent = "Consultando páginas e contas de Instagram vinculadas a este Token...";
+                if (listaContas) listaContas.innerHTML = "";
+
+                try {
+                    const res = await fetch("/api/meta/descobrir-contas", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            accessToken,
+                            appId: appIdInput ? appIdInput.value.trim() : "",
+                            appSecret: appSecretInput ? appSecretInput.value.trim() : ""
+                        })
+                    });
+
+                    const dados = await res.json();
+                    if (!res.ok || !dados.sucesso) {
+                        throw new Error(dados.erro || "Não foi possível consultar o token na Meta.");
+                    }
+
+                    const contas = dados.contas || [];
+                    if (contas.length === 0) {
+                        if (statusResultado) {
+                            statusResultado.textContent = "⚠️ Nenhuma conta Instagram Comercial/Business foi encontrada neste Token. Verifique se o Instagram está conectado a uma Página do Facebook e se você marcou as páginas ao gerar o Token.";
+                        }
+                        return;
+                    }
+
+                    const aplicarConta = (c) => {
+                        if (inputArroba) inputArroba.value = c.identificadorInstagram || "";
+                        if (inputNome) inputNome.value = c.nomeExibicao || "";
+                        if (inputAccountId) inputAccountId.value = c.accountIdMeta || "";
+                        if (c.accessTokenFinal && inputToken) inputToken.value = c.accessTokenFinal;
+                    };
+
+                    // Já preenche a primeira automaticamente
+                    aplicarConta(contas[0]);
+
+                    const msg60d = contas[0].tokenConvertido60Dias
+                        ? " (Token já convertido para 60 dias automaticamente!)"
+                        : "";
+
+                    if (statusResultado) {
+                        statusResultado.textContent = `✅ ${contas.length} conta(s) encontrada(s)${msg60d}! Clique em uma conta abaixo para preencher:`;
+                    }
+
+                    contas.forEach(c => {
+                        const btn = document.createElement("button");
+                        btn.type = "button";
+                        btn.className = "cfg-btn cfg-btn-secondary";
+                        btn.style.borderColor = "#38bdf8";
+                        btn.textContent = `${c.identificadorInstagram} (${c.nomeExibicao}) · ID: ${c.accountIdMeta}`;
+                        btn.addEventListener("click", () => {
+                            aplicarConta(c);
+                            if (statusResultado) {
+                                statusResultado.textContent = `✅ Selecionado: ${c.identificadorInstagram} (ID: ${c.accountIdMeta})${msg60d}`;
+                            }
+                        });
+                        listaContas?.appendChild(btn);
+                    });
+                } catch (err) {
+                    if (statusResultado) {
+                        statusResultado.textContent = `❌ Erro: ${err.message}`;
+                    }
+                } finally {
+                    btnDescobrir.disabled = false;
+                    btnDescobrir.textContent = "🔍 Buscar @@Instagram e ID Sozinho";
+                }
+            });
         }
     })();
 </script>
