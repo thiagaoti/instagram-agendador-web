@@ -66,6 +66,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<InstagramGraphApiService>();
+builder.Services.AddSingleton<CriadorImagemNichoService>();
 builder.Services.AddSingleton<InstagramAgendadorService>();
 builder.Services.AddHostedService<InstagramAgendadorWorker>();
 
@@ -157,6 +158,62 @@ app.MapGet("/media/story/{id:int}.jpg", async (
 
     return Results.File(story.ConteudoImagem, contentType);
 }).AllowAnonymous();
+
+app.MapGet("/api/criador/sugestao", (
+    string? nicho,
+    string? prompt,
+    string? formato,
+    string? arroba,
+    string? titulo,
+    string? selo,
+    string? subtitulo,
+    CriadorImagemNichoService criadorService) =>
+{
+    var sugestao = criadorService.GerarSugestaoCriativa(
+        nicho ?? "ofertas",
+        prompt ?? string.Empty,
+        formato ?? "Feed",
+        arroba,
+        titulo,
+        selo,
+        subtitulo);
+
+    var urlLocalProxy =
+        $"/api/criador/imagem-gerada?url={Uri.EscapeDataString(sugestao.UrlImagemGerada)}&w={sugestao.Largura}&h={sugestao.Altura}";
+
+    return Results.Ok(new
+    {
+        sugestao.Nicho,
+        sugestao.PromptOriginal,
+        sugestao.PromptVisualOtimizado,
+        sugestao.UrlImagemGerada,
+        urlImagemProxy = urlLocalProxy,
+        sugestao.SeloTopo,
+        sugestao.TituloArte,
+        sugestao.SubtituloArte,
+        sugestao.LegendaSugerida,
+        sugestao.Largura,
+        sugestao.Altura
+    });
+});
+
+app.MapGet("/api/criador/imagem-gerada", async (
+    string url,
+    int? w,
+    int? h,
+    CriadorImagemNichoService criadorService,
+    CancellationToken cancellationToken) =>
+{
+    var largura = w is > 100 and <= 2000 ? w.Value : 1080;
+    var altura = h is > 100 and <= 2500 ? h.Value : 1080;
+    var (bytes, contentType) = await criadorService.BaixarOuGerarImagemBytesAsync(
+        url,
+        largura,
+        altura,
+        cancellationToken);
+
+    return Results.File(bytes, contentType);
+});
 
 app.MapRazorPages();
 

@@ -51,6 +51,8 @@
         border: 1px solid var(--border);
         border-radius: 12px;
         flex-wrap: wrap;
+        max-width: 100%;
+        min-width: 0;
     }
 
     .account-switcher select {
@@ -61,6 +63,8 @@
         border-radius: 8px;
         font-size: 13px;
         font-weight: 800;
+        max-width: 100%;
+        min-width: 0;
     }
 
     .dash-alert {
@@ -71,6 +75,7 @@
         border: 1px solid #285c40;
         color: #9af0b9;
         font-size: 13px;
+        overflow-wrap: anywhere;
     }
 
     .dash-alert.erro {
@@ -81,9 +86,10 @@
 
     .dash-metrics {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr));
         gap: 12px;
         margin-bottom: 24px;
+        min-width: 0;
     }
 
     .metric-box {
@@ -91,6 +97,8 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 11px;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .metric-label {
@@ -106,6 +114,8 @@
         font-size: 24px;
         font-weight: 900;
         color: #fff;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .metric-val.pink { color: var(--accent); }
@@ -118,6 +128,15 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 14px;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .dash-section.studio-highlight {
+        background: linear-gradient(160deg, #1b1530 0%, #141224 100%);
+        border: 1px solid #4c3575;
+        box-shadow: 0 14px 40px #0000004d;
     }
 
     .dash-section-title {
@@ -130,18 +149,50 @@
         margin: 0 0 18px;
         color: var(--muted);
         font-size: 12.5px;
+        line-height: 1.5;
+    }
+
+    .split-layout {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .split-layout-studio {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .preview-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        max-width: 100%;
     }
 
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr));
         gap: 14px;
+        min-width: 0;
+        max-width: 100%;
     }
 
     .field {
         display: flex;
         flex-direction: column;
         gap: 6px;
+        min-width: 0;
+        max-width: 100%;
     }
 
     .field label {
@@ -153,6 +204,9 @@
     .field input,
     .field select,
     .field textarea {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         padding: 9px 11px;
         background: var(--panel-alt);
         border: 1px solid var(--border);
@@ -179,11 +233,19 @@
         cursor: pointer;
         border: 1px solid transparent;
         text-decoration: none;
+        max-width: 100%;
+        text-align: center;
     }
 
     .btn-primary {
         background: linear-gradient(90deg, #ff4f8b, #ff7a59);
         color: #16050c;
+    }
+
+    .btn-ai {
+        background: linear-gradient(90deg, #06b6d4, #6366f1, #a855f7);
+        color: #ffffff;
+        box-shadow: 0 6px 20px #6366f144;
     }
 
     .btn-secondary {
@@ -202,19 +264,29 @@
         display: flex;
         flex-direction: column;
         gap: 14px;
+        min-width: 0;
     }
 
     .queue-item {
         display: grid;
-        grid-template-columns: 105px 1fr;
+        grid-template-columns: 105px minmax(0, 1fr);
         gap: 16px;
         padding: 16px;
         background: var(--panel-alt);
         border: 1px solid var(--border);
         border-radius: 12px;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .queue-item > div {
+        min-width: 0;
+        max-width: 100%;
     }
 
     .pill {
+        display: inline-block;
         padding: 4px 9px;
         border-radius: 6px;
         font-size: 10px;
@@ -228,8 +300,32 @@
     .pill.cancelado { background: #211d29; color: #9d91b0; border: 1px solid #352e42; }
 
     @@media (max-width: 780px) {
+        .split-layout,
+        .split-layout-studio,
         .queue-item {
             grid-template-columns: 1fr;
+        }
+
+        .dash-section {
+            padding: 15px 12px;
+            border-radius: 12px;
+        }
+
+        .queue-item {
+            padding: 13px 11px;
+        }
+
+        .account-switcher {
+            width: 100%;
+            padding: 10px 12px;
+        }
+
+        .account-switcher form {
+            width: 100%;
+        }
+
+        .account-switcher select {
+            width: 100%;
         }
     }
 </style>
@@ -331,11 +427,189 @@ else
         </div>
     </section>
 
+    <!-- ESTÚDIO IA: CRIAR IMAGEM POR NICHO VIA PROMPT E JÁ AGENDAR -->
+    <section class="dash-section studio-highlight">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+            <span class="pill agendado" style="background:#1c2548;border-color:#4458a8;color:#93c5fd;">
+                ✨ NOVO · ESTÚDIO CRIADOR DE IMAGEM IA POR NICHO
+            </span>
+        </div>
+        <h2 class="dash-section-title">Criar Imagem por Nicho via Prompt & Já Agendar</h2>
+        <p class="dash-section-desc">
+            Escolha o seu nicho, digite o que você quer na imagem (prompt), gere a foto + arte com chamada + legenda com hashtags e já agende direto para o Feed ou Stories!
+        </p>
+
+        <form method="post"
+              asp-page-handler="GerarImagemEAgendar"
+              id="formEstudioPrompt">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="imagemCompostaBase64" id="studioImagemCompostaBase64" />
+
+            <div class="split-layout-studio">
+                <div class="preview-col">
+                    <div style="width:100%;max-width:225px;background:#0a0910;border:1px solid #443568;border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;">
+                        <canvas id="studioCanvasPreview"
+                                width="1080"
+                                height="1080"
+                                style="width:100%;height:auto;border-radius:8px;background:#120f1d;display:block;"></canvas>
+                        <small id="studioStatusLabel" style="color:#b9ace0;font-size:10.5px;text-align:center;">
+                            Prévia ao vivo da Arte (1080x1080)
+                        </small>
+                    </div>
+
+                    <button type="button"
+                            id="btnGerarPreviaPrompt"
+                            class="btn btn-ai"
+                            style="width:100%;max-width:225px;min-height:40px;">
+                        🎨 Gerar Imagem pelo Prompt
+                    </button>
+                </div>
+
+                <div style="min-width:0;max-width:100%;">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="studioContaIg">Para qual Instagram?</label>
+                            <select id="studioContaIg" name="instagramContaId" required>
+                                @foreach (var conta in Model.ContasDisponiveis)
+                                {
+                                    <option value="@conta.Id"
+                                            data-arroba="@conta.IdentificadorInstagram"
+                                            selected="@(Model.ContaSelecionada?.Id == conta.Id ? "selected" : null)">
+                                        @conta.IdentificadorInstagram — @conta.NomeCadastro
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="studioNicho">Nicho do Conteúdo</label>
+                            <select id="studioNicho" name="nicho">
+                                <option value="ofertas">🔥 Ofertas, Achadinhos & Promoções</option>
+                                <option value="moda">👗 Moda, Roupas & Acessórios</option>
+                                <option value="beleza">💄 Beleza, Estética & Cosméticos</option>
+                                <option value="fitness">💪 Fitness, Academia & Saúde</option>
+                                <option value="gastronomia">🍔 Gastronomia, Delivery & Lanches</option>
+                                <option value="tecnologia">📱 Tecnologia, Games & Eletrônicos</option>
+                                <option value="automotivo">🏍️ Motos, Automotivo & Peças</option>
+                                <option value="imoveis">🏡 Imóveis, Arquitetura & Decoração</option>
+                                <option value="negocios">📈 Negócios, Finanças & Marketing</option>
+                                <option value="motivacional">✨ Frases, Motivacional & Lifestyle</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="studioFormato">Onde publicar / Formato da Imagem</label>
+                            <select id="studioFormato" name="formatoDestino">
+                                <option value="Feed">Feed Quadrado (1080x1080)</option>
+                                <option value="Stories">Story Vertical Único (1080x1920)</option>
+                                <option value="FeedEStories">Feed + Stories Juntos</option>
+                                <option value="StoryRecorrente">Story Automático Todo Dia (9:16)</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="studioEstiloArte">Acabamento da Imagem</label>
+                            <select id="studioEstiloArte">
+                                <option value="completo" selected>Foto IA + Moldura com Título e Selo</option>
+                                <option value="limpo">Somente Foto Gerada por IA (Sem Textos)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field" style="margin-top:12px;">
+                        <label for="studioPrompt">Prompt: O que você quer buscar/criar dentro deste nicho?</label>
+                        <input id="studioPrompt"
+                               name="promptCriacao"
+                               type="text"
+                               placeholder="Ex.: Tênis esportivo moderno em oferta relâmpago / Hambúrguer artesanal com bacon / Dica de treino..."
+                               required />
+                        <small>Descreva o produto, tema ou cena. O sistema busca/gera a foto no estilo do nicho e monta a arte + legenda.</small>
+                    </div>
+
+                    <div class="form-grid" style="margin-top:12px;">
+                        <div class="field">
+                            <label for="studioSelo">Selo de Topo na Arte (opcional)</label>
+                            <input id="studioSelo"
+                                   name="seloTopo"
+                                   type="text"
+                                   value="🔥 DESTAQUE DO DIA"
+                                   placeholder="Ex.: 🔥 OFERTA IMPERDÍVEL" />
+                        </div>
+
+                        <div class="field">
+                            <label for="studioTituloArte">Título Principal na Imagem (opcional)</label>
+                            <input id="studioTituloArte"
+                                   name="tituloArte"
+                                   type="text"
+                                   placeholder="Gerado automaticamente pelo prompt se vazio" />
+                        </div>
+
+                        <div class="field">
+                            <label for="studioSubtituloArte">Chamada / Rodapé na Arte (opcional)</label>
+                            <input id="studioSubtituloArte"
+                                   name="subtituloArte"
+                                   type="text"
+                                   value="Confira os detalhes · Link na Bio!"
+                                   placeholder="Ex.: Link na Bio · Aproveite hoje!" />
+                        </div>
+
+                        <div class="field" id="studioBlocoModoHorario">
+                            <label for="studioModoHorario">Quando postar?</label>
+                            <select id="studioModoHorario" name="modoHorario">
+                                <option value="auto" selected>
+                                    Próximo horário livre (@proximoSlotPadrao.ToString("dd/MM HH:mm"))
+                                </option>
+                                <option value="manual">Escolher data e hora específica</option>
+                            </select>
+                        </div>
+
+                        <div class="field" id="studioCampoHorarioManual" style="display:none;">
+                            <label for="studioHorarioManual">Data e hora (America/Sao_Paulo)</label>
+                            <input id="studioHorarioManual"
+                                   name="horarioEspecificoLocal"
+                                   type="datetime-local"
+                                   value="@proximoSlotPadrao.ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture)" />
+                        </div>
+
+                        <div class="field" id="studioCampoHorariosStory" style="display:none;">
+                            <label for="studioHorariosStory">Horários diários do Story (HH:mm)</label>
+                            <input id="studioHorariosStory"
+                                   name="horariosDiariosStory"
+                                   type="text"
+                                   value="10:00, 19:00"
+                                   placeholder="10:00, 19:00" />
+                        </div>
+                    </div>
+
+                    <div class="field" style="margin-top:12px;">
+                        <label for="studioLegenda">Legenda do Post (gerada automaticamente pelo nicho ou edite como quiser)</label>
+                        <textarea id="studioLegenda"
+                                  name="legendaCustomizada"
+                                  rows="4"
+                                  maxlength="2200"
+                                  placeholder="Clique em 'Gerar Imagem pelo Prompt' para preencher automaticamente a legenda com hashtags do nicho, ou escreva aqui..."></textarea>
+                    </div>
+
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                            <input type="checkbox" name="publicarImediatamente" value="true" />
+                            Publicar imediatamente no Instagram agora
+                        </label>
+
+                        <button type="submit" id="btnSubmitEstudio" class="btn btn-primary" style="min-height:42px;padding:10px 20px;">
+                            🚀 Montar Imagem e Já Agendar para Postar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+
     <!-- 1. AGENDAR NOVO POST (FEED, STORIES OU FEED + STORIES) -->
     <section class="dash-section">
-        <h2 class="dash-section-title">1. Agendar Nova Publicação (Feed, Stories ou Ambos)</h2>
+        <h2 class="dash-section-title">1. Agendar Nova Publicação (Foto do Celular/PC ou Link)</h2>
         <p class="dash-section-desc">
-            Envie a foto do seu celular/computador (ou cole o link da imagem), escolha para qual Instagram vai a publicação, escreva a legenda e agende.
+            Envie uma foto pronta do seu celular/computador (ou cole o link da imagem), escolha para qual Instagram vai a publicação, escreva a legenda e agende.
         </p>
 
         <form method="post"
@@ -343,8 +617,8 @@ else
               enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
-            <div style="display:grid;grid-template-columns:165px 1fr;gap:18px;align-items:start;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+            <div class="split-layout">
+                <div class="preview-col">
                     <div style="width:155px;height:155px;background:var(--panel-alt);border:1px dashed #473869;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;color:var(--muted);font-size:11px;">
                         <img id="postPreviewImg" alt="Prévia do Post" style="display:none;width:100%;height:100%;object-fit:cover;" />
                         <span id="postPreviewText">Prévia da Imagem do Post</span>
@@ -352,7 +626,7 @@ else
                     <small style="color:var(--muted);font-size:10px;text-align:center;">JPG, PNG ou WebP (máx. 8 MB)</small>
                 </div>
 
-                <div>
+                <div style="min-width:0;max-width:100%;">
                     <div class="form-grid">
                         <div class="field">
                             <label for="postContaIg">Para qual Instagram vai este post?</label>
@@ -456,8 +730,8 @@ else
               style="padding:16px;background:var(--panel-alt);border:1px solid var(--border);border-radius:12px;margin-bottom:18px;">
             @Html.AntiForgeryToken()
 
-            <div style="display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start;">
-                <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <div class="split-layout">
+                <div class="preview-col">
                     <div style="width:136px;height:240px;background:#0d0b14;border:1px dashed #473869;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;color:var(--muted);font-size:11px;">
                         <img id="storyPreviewImg" alt="Prévia Story" style="display:none;width:100%;height:100%;object-fit:cover;" />
                         <span id="storyPreviewText">Prévia Vertical 9:16 do Story</span>
@@ -884,5 +1158,304 @@ else
             storyModo.addEventListener("change", toggleStoryModo);
             toggleStoryModo();
         }
+
+        // =====================================================================
+        // ESTÚDIO CRIADOR DE IMAGEM IA POR NICHO + PROMPT
+        // =====================================================================
+        const canvas = document.getElementById("studioCanvasPreview");
+        const btnGerarPrevia = document.getElementById("btnGerarPreviaPrompt");
+        const studioContaIg = document.getElementById("studioContaIg");
+        const studioNicho = document.getElementById("studioNicho");
+        const studioFormato = document.getElementById("studioFormato");
+        const studioEstiloArte = document.getElementById("studioEstiloArte");
+        const studioPrompt = document.getElementById("studioPrompt");
+        const studioSelo = document.getElementById("studioSelo");
+        const studioTituloArte = document.getElementById("studioTituloArte");
+        const studioSubtituloArte = document.getElementById("studioSubtituloArte");
+        const studioLegenda = document.getElementById("studioLegenda");
+        const studioStatusLabel = document.getElementById("studioStatusLabel");
+        const studioBase64Input = document.getElementById("studioImagemCompostaBase64");
+        const studioModoHorario = document.getElementById("studioModoHorario");
+        const studioBlocoModoHorario = document.getElementById("studioBlocoModoHorario");
+        const studioCampoHorarioManual = document.getElementById("studioCampoHorarioManual");
+        const studioCampoHorariosStory = document.getElementById("studioCampoHorariosStory");
+        const formEstudioPrompt = document.getElementById("formEstudioPrompt");
+
+        let imagemFundoCarregada = null;
+
+        function atualizarCamposHorarioEstudio() {
+            if (!studioFormato) return;
+            const ehRecorrente = studioFormato.value === "StoryRecorrente";
+            if (studioBlocoModoHorario) {
+                studioBlocoModoHorario.style.display = ehRecorrente ? "none" : "flex";
+            }
+            if (studioCampoHorariosStory) {
+                studioCampoHorariosStory.style.display = ehRecorrente ? "flex" : "none";
+            }
+            if (studioCampoHorarioManual && studioModoHorario) {
+                studioCampoHorarioManual.style.display = (!ehRecorrente && studioModoHorario.value === "manual") ? "flex" : "none";
+            }
+        }
+
+        if (studioFormato) {
+            studioFormato.addEventListener("change", () => {
+                atualizarCamposHorarioEstudio();
+                desenharArteNoCanvas();
+            });
+        }
+        if (studioModoHorario) {
+            studioModoHorario.addEventListener("change", atualizarCamposHorarioEstudio);
+        }
+        atualizarCamposHorarioEstudio();
+
+        function quebrarLinhasTexto(ctx, texto, maxWidth) {
+            const palavras = (texto || "").split(/\s+/).filter(Boolean);
+            const linhas = [];
+            let atual = "";
+            for (const p of palavras) {
+                const teste = atual ? `${atual} ${p}` : p;
+                if (ctx.measureText(teste).width > maxWidth && atual) {
+                    linhas.push(atual);
+                    atual = p;
+                } else {
+                    atual = teste;
+                }
+            }
+            if (atual) linhas.push(atual);
+            return linhas.slice(0, 4);
+        }
+
+        function desenharArteNoCanvas() {
+            if (!canvas) return;
+            const ehVertical = studioFormato && (studioFormato.value === "Stories" || studioFormato.value === "StoryRecorrente");
+            const W = 1080;
+            const H = ehVertical ? 1920 : 1080;
+            if (canvas.width !== W || canvas.height !== H) {
+                canvas.width = W;
+                canvas.height = H;
+            }
+
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, W, H);
+
+            // 1. Fundo: Imagem gerada por IA ou gradiente estilizado do nicho
+            if (imagemFundoCarregada) {
+                const imgRatio = imagemFundoCarregada.width / imagemFundoCarregada.height;
+                const canvasRatio = W / H;
+                let drawW = W, drawH = H, offsetX = 0, offsetY = 0;
+                if (imgRatio > canvasRatio) {
+                    drawW = H * imgRatio;
+                    offsetX = (W - drawW) / 2;
+                } else {
+                    drawH = W / imgRatio;
+                    offsetY = (H - drawH) / 2;
+                }
+                ctx.drawImage(imagemFundoCarregada, offsetX, offsetY, drawW, drawH);
+            } else {
+                const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+                bgGrad.addColorStop(0, "#0f172a");
+                bgGrad.addColorStop(0.5, "#1e1b4b");
+                bgGrad.addColorStop(1, "#311042");
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, W, H);
+
+                ctx.fillStyle = "rgba(99, 102, 241, 0.14)";
+                ctx.beginPath();
+                ctx.arc(W * 0.8, H * 0.22, W * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const somenteFotoLimpa = studioEstiloArte && studioEstiloArte.value === "limpo";
+            if (!somenteFotoLimpa) {
+                // Vinheta escura inferior para leitura perfeita do texto
+                const overlayGrad = ctx.createLinearGradient(0, H * 0.25, 0, H);
+                overlayGrad.addColorStop(0, "rgba(10, 9, 18, 0.05)");
+                overlayGrad.addColorStop(0.55, "rgba(10, 9, 18, 0.68)");
+                overlayGrad.addColorStop(1, "rgba(8, 7, 15, 0.94)");
+                ctx.fillStyle = overlayGrad;
+                ctx.fillRect(0, 0, W, H);
+
+                // Moldura fina interna
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(42, 42, W - 84, H - 84);
+
+                const selo = (studioSelo && studioSelo.value.trim()) || "🔥 DESTAQUE DO NICHO";
+                const titulo = (studioTituloArte && studioTituloArte.value.trim())
+                    || (studioPrompt && studioPrompt.value.trim() ? studioPrompt.value.trim().toUpperCase() : "DIGITE SEU PROMPT E GERE A IMAGEM");
+                const subtitulo = (studioSubtituloArte && studioSubtituloArte.value.trim()) || "Confira no link da Bio!";
+
+                let arroba = "";
+                if (studioContaIg && studioContaIg.selectedOptions.length > 0) {
+                    arroba = studioContaIg.selectedOptions[0].getAttribute("data-arroba") || "";
+                }
+
+                const baseBottomY = H - (ehVertical ? 210 : 120);
+
+                // Título Principal
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "900 62px Inter, Segoe UI, Arial, sans-serif";
+                ctx.textAlign = "left";
+                const linhasTitulo = quebrarLinhasTexto(ctx, titulo.toUpperCase(), W - 160);
+                const alturaLinha = 74;
+                const blocoTituloAltura = linhasTitulo.length * alturaLinha;
+                const inicioTituloY = baseBottomY - blocoTituloAltura - 55;
+
+                // Badge / Selo acima do título
+                ctx.font = "800 30px Inter, Segoe UI, Arial, sans-serif";
+                const larguraSelo = Math.min(W - 160, ctx.measureText(selo).width + 52);
+                const seloY = inicioTituloY - 82;
+                const pillGrad = ctx.createLinearGradient(80, seloY, 80 + larguraSelo, seloY);
+                pillGrad.addColorStop(0, "#ff4f8b");
+                pillGrad.addColorStop(1, "#ff7a59");
+                ctx.fillStyle = pillGrad;
+                ctx.beginPath();
+                ctx.roundRect(80, seloY, larguraSelo, 54, 14);
+                ctx.fill();
+
+                ctx.fillStyle = "#16050c";
+                ctx.fillText(selo, 106, seloY + 37);
+
+                // Desenha linhas do título
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "900 62px Inter, Segoe UI, Arial, sans-serif";
+                linhasTitulo.forEach((linha, idx) => {
+                    ctx.fillText(linha, 80, inicioTituloY + (idx + 1) * alturaLinha - 14);
+                });
+
+                // Subtítulo / CTA
+                ctx.fillStyle = "#38bdf8";
+                ctx.font = "700 34px Inter, Segoe UI, Arial, sans-serif";
+                ctx.fillText(subtitulo, 80, baseBottomY);
+
+                // Assinatura do @@instagram no topo direito
+                if (arroba) {
+                    ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+                    ctx.font = "800 28px Inter, Segoe UI, Arial, sans-serif";
+                    const wArroba = ctx.measureText(arroba).width + 44;
+                    ctx.beginPath();
+                    ctx.roundRect(W - 80 - wArroba, 76, wArroba, 48, 12);
+                    ctx.fill();
+                    ctx.fillStyle = "#f5effa";
+                    ctx.fillText(arroba, W - 80 - wArroba + 22, 109);
+                }
+            }
+
+            if (studioBase64Input && imagemFundoCarregada) {
+                try {
+                    studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.90);
+                } catch { }
+            }
+        }
+
+        [studioSelo, studioTituloArte, studioSubtituloArte, studioEstiloArte, studioPrompt, studioContaIg].forEach(el => {
+            if (el) {
+                el.addEventListener("input", desenharArteNoCanvas);
+                el.addEventListener("change", desenharArteNoCanvas);
+            }
+        });
+
+        async function gerarArteViaServidor() {
+            if (!studioPrompt || !studioPrompt.value.trim()) {
+                alert("Digite o que você quer buscar/criar no campo de Prompt antes de gerar a imagem.");
+                studioPrompt?.focus();
+                return false;
+            }
+
+            const nicho = studioNicho ? studioNicho.value : "ofertas";
+            const formato = studioFormato ? studioFormato.value : "Feed";
+            const prompt = studioPrompt.value.trim();
+            let arroba = "";
+            if (studioContaIg && studioContaIg.selectedOptions.length > 0) {
+                arroba = studioContaIg.selectedOptions[0].getAttribute("data-arroba") || "";
+            }
+
+            if (btnGerarPrevia) {
+                btnGerarPrevia.disabled = true;
+                btnGerarPrevia.textContent = "⏳ Gerando imagem IA do nicho...";
+            }
+            if (studioStatusLabel) {
+                studioStatusLabel.textContent = "Buscando e montando imagem para o seu nicho...";
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    nicho,
+                    prompt,
+                    formato,
+                    arroba
+                });
+                const res = await fetch(`/api/criador/sugestao?${params.toString()}`);
+                if (!res.ok) throw new Error("Falha ao consultar gerador criativo.");
+                const dados = await res.json();
+
+                if (studioSelo && (!studioSelo.value.trim() || studioSelo.value === "🔥 DESTAQUE DO DIA")) {
+                    studioSelo.value = dados.seloTopo || "🔥 DESTAQUE";
+                }
+                if (studioTituloArte && !studioTituloArte.value.trim()) {
+                    studioTituloArte.value = dados.tituloArte || "";
+                }
+                if (studioSubtituloArte && !studioSubtituloArte.value.trim()) {
+                    studioSubtituloArte.value = dados.subtituloArte || "";
+                }
+                if (studioLegenda && !studioLegenda.value.trim()) {
+                    studioLegenda.value = dados.legendaSugerida || "";
+                }
+
+                await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.onload = () => {
+                        imagemFundoCarregada = img;
+                        desenharArteNoCanvas();
+                        resolve();
+                    };
+                    img.onerror = () => reject(new Error("Não foi possível carregar a prévia da imagem."));
+                    img.src = dados.urlImagemProxy;
+                });
+
+                if (studioStatusLabel) {
+                    studioStatusLabel.textContent = `✅ Imagem (${dados.largura}x${dados.altura}) pronta para agendar!`;
+                }
+                return true;
+            } catch (err) {
+                if (studioStatusLabel) {
+                    studioStatusLabel.textContent = "Arte montada com design do nicho (pronta para agendar).";
+                }
+                desenharArteNoCanvas();
+                if (studioBase64Input && canvas) {
+                    try { studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.90); } catch { }
+                }
+                return true;
+            } finally {
+                if (btnGerarPrevia) {
+                    btnGerarPrevia.disabled = false;
+                    btnGerarPrevia.textContent = "🎨 Gerar Outra Imagem pelo Prompt";
+                }
+            }
+        }
+
+        if (btnGerarPrevia) {
+            btnGerarPrevia.addEventListener("click", () => {
+                gerarArteViaServidor();
+            });
+        }
+
+        if (formEstudioPrompt) {
+            formEstudioPrompt.addEventListener("submit", () => {
+                if (canvas && studioBase64Input && imagemFundoCarregada) {
+                    try {
+                        desenharArteNoCanvas();
+                        studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.90);
+                    } catch { }
+                }
+                const btnSub = document.getElementById("btnSubmitEstudio");
+                if (btnSub) {
+                    btnSub.textContent = "⏳ Montando imagem e agendando...";
+                }
+            });
+        }
+
+        desenharArteNoCanvas();
     })();
 </script>

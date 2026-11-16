@@ -59,6 +59,9 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 14px;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
     }
 
     .cfg-section-title {
@@ -75,14 +78,16 @@
 
     .cfg-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
         gap: 14px;
+        min-width: 0;
     }
 
     .cfg-field {
         display: flex;
         flex-direction: column;
         gap: 5px;
+        min-width: 0;
     }
 
     .cfg-field label {
@@ -93,6 +98,9 @@
 
     .cfg-field input,
     .cfg-field select {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         padding: 9px 11px;
         background: var(--panel-alt);
         border: 1px solid var(--border);
@@ -150,6 +158,21 @@
         background: var(--panel-alt);
         border: 1px solid var(--border);
         border-radius: 12px;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    @@media (max-width: 640px) {
+        .cfg-section {
+            padding: 15px 12px;
+        }
+        .cfg-account-card {
+            padding: 13px 11px;
+        }
+        .cfg-btn {
+            width: 100%;
+        }
     }
 
     .cfg-pill {
