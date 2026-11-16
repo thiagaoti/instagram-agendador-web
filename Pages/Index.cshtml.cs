@@ -49,6 +49,7 @@ public sealed class IndexModel : PageModel
     public async Task<IActionResult> OnPostGerarImagemEAgendarAsync(
         [FromForm] int instagramContaId,
         [FromForm] string? modeloIa,
+        [FromForm] string? apiKeyManual,
         [FromForm] string promptCriacao,
         [FromForm] string formatoDestino,
         [FromForm] string? seloTopo,
@@ -72,17 +73,11 @@ public sealed class IndexModel : PageModel
             var conta = await _agendadorService.ObterContaPorIdAsync(instagramContaId, cancellationToken)
                 ?? throw new InvalidOperationException("Selecione um perfil do Instagram válido.");
 
-            var sugestao = _criadorImagemService.GerarSugestaoPorPrompt(
-                promptCriacao,
-                formatoDestino,
-                conta.IdentificadorInstagram,
-                tituloArte,
-                seloTopo,
-                subtituloArte,
-                modeloIa);
-
             byte[] bytesImagem;
             string contentType = "image/jpeg";
+            string provedorIa = modeloIa ?? "Flux AI";
+            string tituloSugerido = "Publicação IA";
+            string legendaSugerida = promptCriacao;
 
             if (!string.IsNullOrWhiteSpace(imagemCompostaBase64))
             {
@@ -97,17 +92,27 @@ public sealed class IndexModel : PageModel
             }
             else
             {
-                (bytesImagem, contentType) = await _criadorImagemService.BaixarOuGerarImagemBytesAsync(
-                    sugestao.UrlImagemGerada,
-                    sugestao.Largura,
-                    sugestao.Altura,
-                    sugestao.PromptOriginal,
+                var gerada = await _criadorImagemService.GerarImagemPorPromptAsync(
+                    promptCriacao,
+                    formatoDestino,
+                    conta.IdentificadorInstagram,
+                    tituloArte,
+                    seloTopo,
+                    subtituloArte,
+                    modeloIa,
+                    apiKeyManual,
                     cancellationToken);
+
+                bytesImagem = gerada.BytesImagem;
+                contentType = gerada.ContentType;
+                provedorIa = gerada.ProvedorIa;
+                tituloSugerido = gerada.TituloArte;
+                legendaSugerida = gerada.LegendaSugerida;
             }
 
             var tituloFinal = !string.IsNullOrWhiteSpace(tituloArte)
                 ? tituloArte.Trim()
-                : sugestao.TituloArte;
+                : tituloSugerido;
             if (tituloFinal.Length > 140)
             {
                 tituloFinal = tituloFinal[..140];
@@ -115,7 +120,7 @@ public sealed class IndexModel : PageModel
 
             var legendaFinal = !string.IsNullOrWhiteSpace(legendaCustomizada)
                 ? legendaCustomizada.Trim()
-                : sugestao.LegendaSugerida;
+                : legendaSugerida;
 
             if (string.Equals(formatoDestino, "StoryRecorrente", StringComparison.OrdinalIgnoreCase))
             {
@@ -147,7 +152,7 @@ public sealed class IndexModel : PageModel
                 else
                 {
                     TempData["Mensagem"] =
-                        $"Imagem gerada via prompt ({sugestao.ProvedorIa}) e programada como Story Recorrente para {story.IdentificadorInstagram} (próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm})!";
+                        $"Imagem gerada via prompt ({provedorIa}) e programada como Story Recorrente para {story.IdentificadorInstagram} (próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm})!";
                 }
 
                 return RedirectToPage(new { ContaId = instagramContaId });
@@ -205,7 +210,7 @@ public sealed class IndexModel : PageModel
             else
             {
                 TempData["Mensagem"] =
-                    $"Imagem criada via prompt ({sugestao.ProvedorIa}) e agendada com sucesso para {post.IdentificadorInstagram} em {post.HorarioProgramadoLocal:dd/MM/yyyy 'às' HH:mm}!";
+                    $"Imagem criada via prompt ({provedorIa}) e agendada com sucesso para {post.IdentificadorInstagram} em {post.HorarioProgramadoLocal:dd/MM/yyyy 'às' HH:mm}!";
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

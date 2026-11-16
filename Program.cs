@@ -159,62 +159,60 @@ app.MapGet("/media/story/{id:int}.jpg", async (
     return Results.File(story.ConteudoImagem, contentType);
 }).AllowAnonymous();
 
-app.MapGet("/api/criador/sugestao", (
-    string? prompt,
-    string? formato,
-    string? arroba,
-    string? titulo,
-    string? selo,
-    string? subtitulo,
-    string? modeloIa,
-    CriadorImagemNichoService criadorService) =>
-{
-    var sugestao = criadorService.GerarSugestaoPorPrompt(
-        prompt ?? string.Empty,
-        formato ?? "Feed",
-        arroba,
-        titulo,
-        selo,
-        subtitulo,
-        modeloIa);
-
-    var urlLocalProxy =
-        $"/api/criador/imagem-gerada?url={Uri.EscapeDataString(sugestao.UrlImagemGerada)}&w={sugestao.Largura}&h={sugestao.Altura}&prompt={Uri.EscapeDataString(sugestao.PromptOriginal)}";
-
-    return Results.Ok(new
-    {
-        sugestao.PromptOriginal,
-        sugestao.PromptVisualOtimizado,
-        sugestao.ProvedorIa,
-        sugestao.UrlImagemGerada,
-        urlImagemProxy = urlLocalProxy,
-        sugestao.SeloTopo,
-        sugestao.TituloArte,
-        sugestao.SubtituloArte,
-        sugestao.LegendaSugerida,
-        sugestao.Largura,
-        sugestao.Altura
-    });
-});
-
-app.MapGet("/api/criador/imagem-gerada", async (
-    string url,
-    int? w,
-    int? h,
-    string? prompt,
+app.MapPost("/api/criador/gerar-imagem", async (
+    HttpContext httpContext,
     CriadorImagemNichoService criadorService,
     CancellationToken cancellationToken) =>
 {
-    var largura = w is > 100 and <= 2000 ? w.Value : 1080;
-    var altura = h is > 100 and <= 2500 ? h.Value : 1080;
-    var (bytes, contentType) = await criadorService.BaixarOuGerarImagemBytesAsync(
-        url,
-        largura,
-        altura,
-        prompt,
-        cancellationToken);
+    try
+    {
+        using var doc = await System.Text.Json.JsonDocument.ParseAsync(
+            httpContext.Request.Body,
+            cancellationToken: cancellationToken);
+        var root = doc.RootElement;
 
-    return Results.File(bytes, contentType);
+        string ObterStr(string nome) =>
+            root.TryGetProperty(nome, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.String
+                ? p.GetString() ?? string.Empty
+                : string.Empty;
+
+        var resultado = await criadorService.GerarImagemPorPromptAsync(
+            promptUsuario: ObterStr("prompt"),
+            formato: ObterStr("formato"),
+            identificadorInstagram: ObterStr("arroba"),
+            tituloCustomizado: ObterStr("titulo"),
+            seloCustomizado: ObterStr("selo"),
+            subtituloCustomizado: ObterStr("subtitulo"),
+            modeloIa: ObterStr("modeloIa"),
+            apiKeyManual: ObterStr("apiKeyManual"),
+            cancellationToken: cancellationToken);
+
+        return Results.Ok(new
+        {
+            resultado.Sucesso,
+            resultado.ProvedorIa,
+            resultado.PromptVisualUsado,
+            resultado.ImagemBase64DataUrl,
+            resultado.SeloTopo,
+            resultado.TituloArte,
+            resultado.SubtituloArte,
+            resultado.BeneficiosExtraidos,
+            resultado.ChamadaCta,
+            resultado.BotaoWhatsapp,
+            resultado.RodapeTexto,
+            resultado.LegendaSugerida,
+            resultado.Largura,
+            resultado.Altura
+        });
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        return Results.BadRequest(new
+        {
+            sucesso = false,
+            erro = ex.GetBaseException().Message
+        });
+    }
 });
 
 app.MapRazorPages();

@@ -486,8 +486,8 @@ else
                             <select id="studioModeloIa" name="modeloIa">
                                 <option value="flux" selected>⚡ Flux AI (Gratuito · Sem Chave API)</option>
                                 <option value="flux-realism">📸 Flux Realism (Fotorealista · Gratuito)</option>
-                                <option value="flux-3d">🧊 Flux 3D Render (Gratuito)</option>
-                                <option value="dalle3">🤖 OpenAI DALL-E 3 (Usa OPENAI_API_KEY ou Flux)</option>
+                                <option value="gemini">✨ Google Gemini Imagen 3 (Chave AIza...)</option>
+                                <option value="dalle3">🤖 OpenAI DALL-E 3 (Chave sk-...)</option>
                             </select>
                         </div>
 
@@ -504,20 +504,29 @@ else
                         <div class="field">
                             <label for="studioEstiloArte">Acabamento da Imagem</label>
                             <select id="studioEstiloArte">
-                                <option value="limpo" selected>Somente a Imagem Gerada pela IA (Sem Textos)</option>
-                                <option value="completo">Imagem IA + Moldura com Título e Chamada</option>
+                                <option value="poster" selected>Poster Comercial Completo (Foto IA + Textos do Prompt)</option>
+                                <option value="limpo">Somente a Imagem Gerada pela IA (Sem Textos)</option>
+                                <option value="completo">Imagem IA + Moldura Simples (Selo e Título)</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="field" style="margin-top:12px;">
-                        <label for="studioPrompt">Digite o seu Prompt (descreva exatamente a imagem que a IA deve criar)</label>
-                        <input id="studioPrompt"
-                               name="promptCriacao"
-                               type="text"
-                               placeholder="Ex.: Uma scooter vermelha moderna estacionada em uma avenida iluminada à noite, estilo fotografia comercial 8k..."
-                               required />
-                        <small>Pode escrever em português ou inglês. A IA cria a imagem do zero a partir da sua descrição.</small>
+                        <label for="studioPrompt">Cole ou digite o seu Prompt completo (em português ou inglês)</label>
+                        <textarea id="studioPrompt"
+                                  name="promptCriacao"
+                                  rows="5"
+                                  placeholder="Cole aqui o seu prompt detalhado (ex.: Create a premium, high-impact vertical promotional poster 9:16 for SCOOTER ACHADINHOS...)"
+                                  required></textarea>
+                        <small>Suporta prompts longos e estruturados! O sistema gera a foto real do veículo/produto via IA e monta os textos em português com nitidez.</small>
+                    </div>
+
+                    <div class="field" style="margin-top:10px;">
+                        <label for="studioApiKey">Chave API Opcional (Google Gemini `AIza...` ou OpenAI `sk-...` — deixe vazio para usar o Flux Gratuito)</label>
+                        <input id="studioApiKey"
+                               name="apiKeyManual"
+                               type="password"
+                               placeholder="Opcional: cole sua chave Gemini ou OpenAI se quiser usar Imagen 3 / DALL-E 3" />
                     </div>
 
                     <div class="form-grid" style="margin-top:12px;">
@@ -1160,6 +1169,7 @@ else
         const btnGerarPrevia = document.getElementById("btnGerarPreviaPrompt");
         const studioContaIg = document.getElementById("studioContaIg");
         const studioModeloIa = document.getElementById("studioModeloIa");
+        const studioApiKey = document.getElementById("studioApiKey");
         const studioFormato = document.getElementById("studioFormato");
         const studioEstiloArte = document.getElementById("studioEstiloArte");
         const studioPrompt = document.getElementById("studioPrompt");
@@ -1176,6 +1186,22 @@ else
         const formEstudioPrompt = document.getElementById("formEstudioPrompt");
 
         let imagemFundoCarregada = null;
+        let posterMetadata = {
+            beneficios: [],
+            cta: "",
+            whatsapp: "",
+            rodape: ""
+        };
+
+        try {
+            const savedKey = localStorage.getItem("agendador_pro_ai_key");
+            if (savedKey && studioApiKey) studioApiKey.value = savedKey;
+            if (studioApiKey) {
+                studioApiKey.addEventListener("change", () => {
+                    try { localStorage.setItem("agendador_pro_ai_key", studioApiKey.value.trim()); } catch { }
+                });
+            }
+        } catch { }
 
         function atualizarCamposHorarioEstudio() {
             if (!studioFormato) return;
@@ -1221,7 +1247,9 @@ else
 
         function desenharArteNoCanvas() {
             if (!canvas) return;
-            const ehVertical = studioFormato && (studioFormato.value === "Stories" || studioFormato.value === "StoryRecorrente");
+            const textoPrompt = (studioPrompt && studioPrompt.value) || "";
+            const pedeVerticalNoPrompt = /9:16|1080x1920|vertical/i.test(textoPrompt);
+            const ehVertical = (studioFormato && (studioFormato.value === "Stories" || studioFormato.value === "StoryRecorrente")) || pedeVerticalNoPrompt;
             const W = 1080;
             const H = ehVertical ? 1920 : 1080;
             if (canvas.width !== W || canvas.height !== H) {
@@ -1232,7 +1260,7 @@ else
             const ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, W, H);
 
-            // 1. Fundo: Imagem gerada por IA ou gradiente estilizado do nicho
+            // 1. Fundo: Imagem gerada por IA
             if (imagemFundoCarregada) {
                 const imgRatio = imagemFundoCarregada.width / imagemFundoCarregada.height;
                 const canvasRatio = W / H;
@@ -1247,21 +1275,169 @@ else
                 ctx.drawImage(imagemFundoCarregada, offsetX, offsetY, drawW, drawH);
             } else {
                 const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-                bgGrad.addColorStop(0, "#0f172a");
-                bgGrad.addColorStop(0.5, "#1e1b4b");
-                bgGrad.addColorStop(1, "#311042");
+                bgGrad.addColorStop(0, "#051810");
+                bgGrad.addColorStop(0.5, "#09261a");
+                bgGrad.addColorStop(1, "#040d09");
                 ctx.fillStyle = bgGrad;
                 ctx.fillRect(0, 0, W, H);
-
-                ctx.fillStyle = "rgba(99, 102, 241, 0.14)";
-                ctx.beginPath();
-                ctx.arc(W * 0.8, H * 0.22, W * 0.35, 0, Math.PI * 2);
-                ctx.fill();
             }
 
-            const somenteFotoLimpa = studioEstiloArte && studioEstiloArte.value === "limpo";
-            if (!somenteFotoLimpa) {
-                // Vinheta escura inferior para leitura perfeita do texto
+            const modoEstilo = studioEstiloArte ? studioEstiloArte.value : "poster";
+            if (modoEstilo === "limpo") {
+                if (studioBase64Input && imagemFundoCarregada) {
+                    try { studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.92); } catch { }
+                }
+                return;
+            }
+
+            const tituloRaw = (studioTituloArte && studioTituloArte.value.trim()) || "SCOOTER ACHADINHOS";
+            const selo = (studioSelo && studioSelo.value.trim()) || "As melhores ofertas em Scooter e Acessórios!";
+            const subtitulo = (studioSubtituloArte && studioSubtituloArte.value.trim()) || posterMetadata.cta || "Entre no nosso grupo e não perca nenhuma oferta!";
+
+            if (modoEstilo === "poster") {
+                // Vinheta de topo e base para destacar o cabeçalho 3D e o rodapé WhatsApp sem esconder a moto no centro
+                const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.30);
+                topGrad.addColorStop(0, "rgba(3, 12, 8, 0.90)");
+                topGrad.addColorStop(1, "rgba(3, 12, 8, 0.0)");
+                ctx.fillStyle = topGrad;
+                ctx.fillRect(0, 0, W, H * 0.30);
+
+                const botGrad = ctx.createLinearGradient(0, H * 0.62, 0, H);
+                botGrad.addColorStop(0, "rgba(3, 12, 8, 0.0)");
+                botGrad.addColorStop(0.45, "rgba(4, 15, 10, 0.82)");
+                botGrad.addColorStop(1, "rgba(2, 10, 6, 0.96)");
+                ctx.fillStyle = botGrad;
+                ctx.fillRect(0, H * 0.62, W, H * 0.38);
+
+                // Cabeçalho Principal 3D (divide 1ª palavra em branco metálico e resto em gradiente laranja/amarelo)
+                const partesTitulo = tituloRaw.toUpperCase().split(/\s+/);
+                const primeiraPalavra = partesTitulo[0] || "SCOOTER";
+                const restoPalavras = partesTitulo.slice(1).join(" ") || "";
+
+                ctx.save();
+                ctx.textAlign = "center";
+                ctx.shadowColor = "#22c55e";
+                ctx.shadowBlur = 28;
+                ctx.lineWidth = 14;
+                ctx.strokeStyle = "#040b07";
+
+                ctx.font = "900 94px Inter, Segoe UI, Impact, Arial, sans-serif";
+                ctx.strokeText(primeiraPalavra, W / 2, 145);
+                ctx.fillStyle = "#f8fafc";
+                ctx.fillText(primeiraPalavra, W / 2, 145);
+
+                if (restoPalavras) {
+                    ctx.font = "900 84px Inter, Segoe UI, Impact, Arial, sans-serif";
+                    ctx.strokeText(restoPalavras, W / 2, 232);
+                    const gradLaranja = ctx.createLinearGradient(W * 0.2, 170, W * 0.8, 240);
+                    gradLaranja.addColorStop(0, "#facc15");
+                    gradLaranja.addColorStop(0.5, "#fb923c");
+                    gradLaranja.addColorStop(1, "#f97316");
+                    ctx.fillStyle = gradLaranja;
+                    ctx.fillText(restoPalavras, W / 2, 232);
+                }
+                ctx.restore();
+
+                // Subtítulo abaixo do cabeçalho
+                ctx.save();
+                ctx.textAlign = "center";
+                ctx.font = "800 33px Inter, Segoe UI, Arial, sans-serif";
+                ctx.fillStyle = "#fef08a";
+                ctx.shadowColor = "#000000";
+                ctx.shadowBlur = 10;
+                ctx.fillText(selo, W / 2, restoPalavras ? 286 : 210);
+                ctx.restore();
+
+                // Painéis de Benefícios na lateral direita (com borda verde neon)
+                const listaBeneficios = posterMetadata.beneficios && posterMetadata.beneficios.length > 0
+                    ? posterMetadata.beneficios
+                    : ["Descontos Imperdíveis", "Ofertas Confiáveis", "Receba em Primeira Mão"];
+
+                if (ehVertical) {
+                    let boxY = 620;
+                    listaBeneficios.forEach(item => {
+                        const boxW = 430;
+                        const boxH = 74;
+                        const boxX = W - boxW - 44;
+
+                        ctx.save();
+                        ctx.fillStyle = "rgba(5, 16, 11, 0.86)";
+                        ctx.strokeStyle = "#22c55e";
+                        ctx.lineWidth = 4;
+                        ctx.shadowColor = "#22c55e";
+                        ctx.shadowBlur = 16;
+                        ctx.beginPath();
+                        ctx.roundRect(boxX, boxY, boxW, boxH, 16);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.restore();
+
+                        ctx.fillStyle = "#4ade80";
+                        ctx.font = "900 30px Inter, Segoe UI, Arial, sans-serif";
+                        ctx.textAlign = "left";
+                        ctx.fillText("✔", boxX + 22, boxY + 48);
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = "800 26px Inter, Segoe UI, Arial, sans-serif";
+                        ctx.fillText(item, boxX + 62, boxY + 47);
+
+                        boxY += 94;
+                    });
+                }
+
+                // Faixa Diagonal Amarela de Call-To-Action
+                const ctaY = H - (ehVertical ? 360 : 230);
+                ctx.save();
+                ctx.translate(W / 2, ctaY);
+                ctx.rotate(-0.025);
+                const bannerGrad = ctx.createLinearGradient(-460, -40, 460, 40);
+                bannerGrad.addColorStop(0, "#fde047");
+                bannerGrad.addColorStop(1, "#facc15");
+                ctx.fillStyle = bannerGrad;
+                ctx.shadowColor = "rgba(0,0,0,0.75)";
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.roundRect(-470, -44, 940, 88, 18);
+                ctx.fill();
+
+                ctx.fillStyle = "#052e16";
+                ctx.font = "900 31px Inter, Segoe UI, Arial, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(subtitulo, 0, 11);
+                ctx.restore();
+
+                // Botão Neon Verde do WhatsApp
+                const wppTexto = posterMetadata.whatsapp || "Grupo no WhatsApp";
+                const wppY = H - (ehVertical ? 235 : 135);
+                ctx.save();
+                const wppGrad = ctx.createLinearGradient(W / 2 - 330, wppY, W / 2 + 330, wppY + 96);
+                wppGrad.addColorStop(0, "#16a34a");
+                wppGrad.addColorStop(0.5, "#22c55e");
+                wppGrad.addColorStop(1, "#15803d");
+                ctx.fillStyle = wppGrad;
+                ctx.strokeStyle = "#86efac";
+                ctx.lineWidth = 4;
+                ctx.shadowColor = "#22c55e";
+                ctx.shadowBlur = 30;
+                ctx.beginPath();
+                ctx.roundRect(W / 2 - 330, wppY, 660, 96, 48);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "900 42px Inter, Segoe UI, Arial, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`📲 ${wppTexto}`, W / 2, wppY + 63);
+                ctx.restore();
+
+                // Rodapé
+                const rodapeTexto = posterMetadata.rodape || "Scooter Achadinhos — Sempre com Você!";
+                ctx.fillStyle = "#fef08a";
+                ctx.font = "italic 700 28px Inter, Segoe UI, Georgia, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(rodapeTexto, W / 2, H - 52);
+            } else {
+                // Estilo Moldura Simples
                 const overlayGrad = ctx.createLinearGradient(0, H * 0.25, 0, H);
                 overlayGrad.addColorStop(0, "rgba(10, 9, 18, 0.05)");
                 overlayGrad.addColorStop(0.55, "rgba(10, 9, 18, 0.68)");
@@ -1269,75 +1445,26 @@ else
                 ctx.fillStyle = overlayGrad;
                 ctx.fillRect(0, 0, W, H);
 
-                // Moldura fina interna
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-                ctx.lineWidth = 3;
-                ctx.strokeRect(42, 42, W - 84, H - 84);
-
-                const selo = (studioSelo && studioSelo.value.trim()) || "🔥 DESTAQUE DO NICHO";
-                const titulo = (studioTituloArte && studioTituloArte.value.trim())
-                    || (studioPrompt && studioPrompt.value.trim() ? studioPrompt.value.trim().toUpperCase() : "DIGITE SEU PROMPT E GERE A IMAGEM");
-                const subtitulo = (studioSubtituloArte && studioSubtituloArte.value.trim()) || "Confira no link da Bio!";
-
-                let arroba = "";
-                if (studioContaIg && studioContaIg.selectedOptions.length > 0) {
-                    arroba = studioContaIg.selectedOptions[0].getAttribute("data-arroba") || "";
-                }
-
                 const baseBottomY = H - (ehVertical ? 210 : 120);
-
-                // Título Principal
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "900 62px Inter, Segoe UI, Arial, sans-serif";
                 ctx.textAlign = "left";
-                const linhasTitulo = quebrarLinhasTexto(ctx, titulo.toUpperCase(), W - 160);
+                const linhasTitulo = quebrarLinhasTexto(ctx, tituloRaw.toUpperCase(), W - 160);
                 const alturaLinha = 74;
-                const blocoTituloAltura = linhasTitulo.length * alturaLinha;
-                const inicioTituloY = baseBottomY - blocoTituloAltura - 55;
+                const inicioTituloY = baseBottomY - (linhasTitulo.length * alturaLinha) - 55;
 
-                // Badge / Selo acima do título
-                ctx.font = "800 30px Inter, Segoe UI, Arial, sans-serif";
-                const larguraSelo = Math.min(W - 160, ctx.measureText(selo).width + 52);
-                const seloY = inicioTituloY - 82;
-                const pillGrad = ctx.createLinearGradient(80, seloY, 80 + larguraSelo, seloY);
-                pillGrad.addColorStop(0, "#ff4f8b");
-                pillGrad.addColorStop(1, "#ff7a59");
-                ctx.fillStyle = pillGrad;
-                ctx.beginPath();
-                ctx.roundRect(80, seloY, larguraSelo, 54, 14);
-                ctx.fill();
-
-                ctx.fillStyle = "#16050c";
-                ctx.fillText(selo, 106, seloY + 37);
-
-                // Desenha linhas do título
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "900 62px Inter, Segoe UI, Arial, sans-serif";
                 linhasTitulo.forEach((linha, idx) => {
                     ctx.fillText(linha, 80, inicioTituloY + (idx + 1) * alturaLinha - 14);
                 });
 
-                // Subtítulo / CTA
                 ctx.fillStyle = "#38bdf8";
                 ctx.font = "700 34px Inter, Segoe UI, Arial, sans-serif";
                 ctx.fillText(subtitulo, 80, baseBottomY);
-
-                // Assinatura do @@instagram no topo direito
-                if (arroba) {
-                    ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
-                    ctx.font = "800 28px Inter, Segoe UI, Arial, sans-serif";
-                    const wArroba = ctx.measureText(arroba).width + 44;
-                    ctx.beginPath();
-                    ctx.roundRect(W - 80 - wArroba, 76, wArroba, 48, 12);
-                    ctx.fill();
-                    ctx.fillStyle = "#f5effa";
-                    ctx.fillText(arroba, W - 80 - wArroba + 22, 109);
-                }
             }
 
             if (studioBase64Input && imagemFundoCarregada) {
                 try {
-                    studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.90);
+                    studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.92);
                 } catch { }
             }
         }
@@ -1351,14 +1478,20 @@ else
 
         async function gerarArteViaServidor() {
             if (!studioPrompt || !studioPrompt.value.trim()) {
-                alert("Digite o que você quer buscar/criar no campo de Prompt antes de gerar a imagem.");
+                alert("Digite ou cole o seu Prompt antes de gerar a imagem.");
                 studioPrompt?.focus();
                 return false;
             }
 
+            const prompt = studioPrompt.value.trim();
+            if (/9:16|1080x1920|vertical/i.test(prompt) && studioFormato && studioFormato.value === "Feed") {
+                studioFormato.value = "Stories";
+                atualizarCamposHorarioEstudio();
+            }
+
             const modeloIa = studioModeloIa ? studioModeloIa.value : "flux";
             const formato = studioFormato ? studioFormato.value : "Feed";
-            const prompt = studioPrompt.value.trim();
+            const apiKeyManual = studioApiKey ? studioApiKey.value.trim() : "";
             let arroba = "";
             if (studioContaIg && studioContaIg.selectedOptions.length > 0) {
                 arroba = studioContaIg.selectedOptions[0].getAttribute("data-arroba") || "";
@@ -1366,65 +1499,78 @@ else
 
             if (btnGerarPrevia) {
                 btnGerarPrevia.disabled = true;
-                btnGerarPrevia.textContent = "⏳ Gerando imagem via IA...";
+                btnGerarPrevia.textContent = "⏳ Gerando foto real via IA...";
             }
             if (studioStatusLabel) {
-                studioStatusLabel.textContent = "Gerando imagem pelo seu prompt...";
+                studioStatusLabel.textContent = "Gerando imagem na IA (leva ~8 a 15 segundos)...";
             }
 
             try {
-                const params = new URLSearchParams({
-                    modeloIa,
-                    prompt,
-                    formato,
-                    arroba
+                const res = await fetch("/api/criador/gerar-imagem", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        prompt,
+                        formato,
+                        arroba,
+                        modeloIa,
+                        apiKeyManual,
+                        titulo: studioTituloArte ? studioTituloArte.value.trim() : "",
+                        selo: studioSelo ? studioSelo.value.trim() : "",
+                        subtitulo: studioSubtituloArte ? studioSubtituloArte.value.trim() : ""
+                    })
                 });
-                const res = await fetch(`/api/criador/sugestao?${params.toString()}`);
-                if (!res.ok) throw new Error("Falha ao consultar gerador criativo.");
-                const dados = await res.json();
 
-                if (studioSelo && (!studioSelo.value.trim() || studioSelo.value === "🔥 DESTAQUE DO DIA")) {
-                    studioSelo.value = dados.seloTopo || "🔥 DESTAQUE";
+                const dados = await res.json();
+                if (!res.ok || !dados.sucesso) {
+                    throw new Error(dados.erro || "Falha ao gerar imagem na IA.");
                 }
-                if (studioTituloArte && !studioTituloArte.value.trim()) {
-                    studioTituloArte.value = dados.tituloArte || "";
+
+                posterMetadata = {
+                    beneficios: dados.beneficiosExtraidos || [],
+                    cta: dados.chamadaCta || "",
+                    whatsapp: dados.botaoWhatsapp || "",
+                    rodape: dados.rodapeTexto || ""
+                };
+
+                if (studioSelo && dados.seloTopo) {
+                    studioSelo.value = dados.seloTopo;
                 }
-                if (studioSubtituloArte && !studioSubtituloArte.value.trim()) {
-                    studioSubtituloArte.value = dados.subtituloArte || "";
+                if (studioTituloArte && dados.tituloArte) {
+                    studioTituloArte.value = dados.tituloArte;
                 }
-                if (studioLegenda && !studioLegenda.value.trim()) {
+                if (studioSubtituloArte && dados.subtituloArte) {
+                    studioSubtituloArte.value = dados.subtituloArte;
+                }
+                if (studioLegenda && (!studioLegenda.value.trim() || dados.legendaSugerida)) {
                     studioLegenda.value = dados.legendaSugerida || "";
                 }
 
                 await new Promise((resolve, reject) => {
                     const img = new Image();
-                    img.crossOrigin = "anonymous";
                     img.onload = () => {
                         imagemFundoCarregada = img;
                         desenharArteNoCanvas();
                         resolve();
                     };
-                    img.onerror = () => reject(new Error("Não foi possível carregar a prévia da imagem."));
-                    img.src = dados.urlImagemProxy;
+                    img.onerror = () => reject(new Error("Erro ao renderizar a imagem retornada pela IA."));
+                    img.src = dados.imagemBase64DataUrl;
                 });
 
                 if (studioStatusLabel) {
-                    studioStatusLabel.textContent = `✅ Imagem (${dados.largura}x${dados.altura}) pronta para agendar!`;
+                    studioStatusLabel.textContent = `✅ Gerada via ${dados.provedorIa} (${dados.largura}x${dados.altura})!`;
                 }
                 return true;
             } catch (err) {
                 if (studioStatusLabel) {
-                    studioStatusLabel.textContent = "Arte montada com design do nicho (pronta para agendar).";
+                    studioStatusLabel.textContent = `⚠️ ${err.message || "Erro ao consultar IA."}`;
                 }
-                desenharArteNoCanvas();
-                if (studioBase64Input && canvas) {
-                    try { studioBase64Input.value = canvas.toDataURL("image/jpeg", 0.90); } catch { }
-                }
-                return true;
+                alert(err.message || "Erro ao gerar imagem na IA.");
+                return false;
             } finally {
                 if (btnGerarPrevia) {
                     btnGerarPrevia.disabled = false;
-                    btnGerarPrevia.textContent = "🎨 Gerar Outra Imagem pelo Prompt";
+                    btnGerarPrevia.textContent = "🎨 Gerar Imagem pelo Prompt";
                 }
             }
         }

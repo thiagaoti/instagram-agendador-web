@@ -1,17 +1,25 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace InstagramAgendador.Web.Services;
 
-public sealed record SugestaoCriativaPrompt(
-    string PromptOriginal,
-    string PromptVisualOtimizado,
+public sealed record ResultadoGeracaoImagemIa(
+    bool Sucesso,
+    string? Erro,
     string ProvedorIa,
-    string UrlImagemGerada,
+    string PromptVisualUsado,
+    string ImagemBase64DataUrl,
+    byte[] BytesImagem,
+    string ContentType,
     string SeloTopo,
     string TituloArte,
     string SubtituloArte,
+    IReadOnlyList<string> BeneficiosExtraidos,
+    string ChamadaCta,
+    string BotaoWhatsapp,
+    string RodapeTexto,
     string LegendaSugerida,
     int Largura,
     int Altura);
@@ -32,44 +40,50 @@ public sealed class CriadorImagemNichoService
         _logger = logger;
     }
 
-    public SugestaoCriativaPrompt GerarSugestaoPorPrompt(
+    public async Task<ResultadoGeracaoImagemIa> GerarImagemPorPromptAsync(
         string promptUsuario,
         string formato,
         string? identificadorInstagram = null,
         string? tituloCustomizado = null,
         string? seloCustomizado = null,
         string? subtituloCustomizado = null,
-        string? modeloIa = null)
+        string? modeloIa = null,
+        string? apiKeyManual = null,
+        CancellationToken cancellationToken = default)
     {
-        var promptLimpo = (promptUsuario ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(promptLimpo))
+        var promptOriginal = (promptUsuario ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(promptOriginal))
         {
-            promptLimpo = "Fotografia profissional de alta qualidade para Instagram";
+            throw new ArgumentException("Digite o prompt descrevendo a imagem que deseja criar.");
         }
 
         var ehVertical = string.Equals(formato, "Stories", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(formato, "StoryRecorrente", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(formato, "StoryRecorrente", StringComparison.OrdinalIgnoreCase)
+            || promptOriginal.Contains("9:16", StringComparison.OrdinalIgnoreCase)
+            || promptOriginal.Contains("1080x1920", StringComparison.OrdinalIgnoreCase);
 
         var largura = 1080;
         var altura = ehVertical ? 1920 : 1080;
 
-        var modeloEscolhido = string.IsNullOrWhiteSpace(modeloIa) ? "flux" : modeloIa.Trim().ToLowerInvariant();
-        var seed = Random.Shared.Next(10000, 999999);
+        var modeloEscolhido = string.IsNullOrWhiteSpace(modeloIa)
+            ? "flux"
+            : modeloIa.Trim().ToLowerInvariant();
 
-        var promptVisual =
-            $"{promptLimpo}, professional photography, ultra detailed, cinematic lighting, high resolution, 8k, photorealistic";
-
-        var promptEncoded = Uri.EscapeDataString(promptVisual);
-        var urlPollinations =
-            $"https://image.pollinations.ai/prompt/{promptEncoded}?width={largura}&height={altura}&seed={seed}&nologo=true&model={Uri.EscapeDataString(modeloEscolhido)}";
+        // Extrai metadados caso o prompt seja um briefing estruturado de poster (ex: MAIN HEADER, MAIN VISUAL, BENEFITS, WHATSAPP)
+        var (promptCenaVisual, tituloExtraido, subtituloExtraido, beneficios, ctaExtraido, whatsappExtraido, rodapeExtraido) =
+            AnalisarPromptEstruturado(promptOriginal);
 
         var selo = !string.IsNullOrWhiteSpace(seloCustomizado)
             ? seloCustomizado.Trim()
-            : "✨ DESTAQUE";
+            : !string.IsNullOrWhiteSpace(subtituloExtraido)
+                ? subtituloExtraido
+                : "✨ DESTAQUE";
 
         var titulo = !string.IsNullOrWhiteSpace(tituloCustomizado)
             ? tituloCustomizado.Trim()
-            : GerarTituloImpacto(promptLimpo);
+            : !string.IsNullOrWhiteSpace(tituloExtraido)
+                ? tituloExtraido
+                : GerarTituloImpacto(promptOriginal);
 
         var arroba = string.IsNullOrWhiteSpace(identificadorInstagram)
             ? string.Empty
@@ -77,82 +91,257 @@ public sealed class CriadorImagemNichoService
 
         var subtitulo = !string.IsNullOrWhiteSpace(subtituloCustomizado)
             ? subtituloCustomizado.Trim()
-            : string.IsNullOrWhiteSpace(arroba)
-                ? "Confira todos os detalhes · Link na Bio!"
-                : $"Siga {arroba} · Confira no link da Bio!";
+            : !string.IsNullOrWhiteSpace(ctaExtraido)
+                ? ctaExtraido
+                : string.IsNullOrWhiteSpace(arroba)
+                    ? "Confira todos os detalhes · Link na Bio!"
+                    : $"Siga {arroba} · Confira no link da Bio!";
 
-        var legenda = GerarLegendaPorPrompt(promptLimpo, arroba);
+        var legenda = GerarLegendaPorPrompt(promptOriginal, titulo, subtitulo, beneficios, arroba);
 
-        return new SugestaoCriativaPrompt(
-            PromptOriginal: promptLimpo,
-            PromptVisualOtimizado: promptVisual,
-            ProvedorIa: $"Flux AI ({modeloEscolhido})",
-            UrlImagemGerada: urlPollinations,
-            SeloTopo: selo,
-            TituloArte: titulo,
-            SubtituloArte: subtitulo,
-            LegendaSugerida: legenda,
-            Largura: largura,
-            Altura: altura);
-    }
-
-    public async Task<(byte[] Bytes, string ContentType)> BaixarOuGerarImagemBytesAsync(
-        string urlImagemGerada,
-        int largura,
-        int altura,
-        string? promptOriginal = null,
-        CancellationToken cancellationToken = default)
-    {
         var client = _httpClientFactory.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(35);
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; AgendadorPro/2.0)");
+        client.Timeout = TimeSpan.FromSeconds(45);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
 
-        // 1. Se houver OPENAI_API_KEY configurada e o usuário escolheu DALL-E 3, permite gerar via OpenAI
-        var openAiKey = _configuration["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        // 1. Se escolheu OpenAI (DALL-E 3 / gpt-image-1) ou informou chave OpenAI
+        var openAiKey = !string.IsNullOrWhiteSpace(apiKeyManual) && apiKeyManual.StartsWith("sk-", StringComparison.Ordinal)
+            ? apiKeyManual.Trim()
+            : _configuration["OpenAI:ApiKey"] ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+
         if (!string.IsNullOrWhiteSpace(openAiKey) &&
-            urlImagemGerada.Contains("model=dalle3", StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(promptOriginal))
+            (modeloEscolhido.Contains("dalle", StringComparison.OrdinalIgnoreCase) ||
+             modeloEscolhido.Contains("openai", StringComparison.OrdinalIgnoreCase)))
         {
+            var dalleBytes = await GerarImagemOpenAiDalleAsync(client, openAiKey, promptOriginal, largura, altura, cancellationToken);
+            if (dalleBytes is { Length: > 1024 })
+            {
+                var b64OpenAi = $"data:image/png;base64,{Convert.ToBase64String(dalleBytes)}";
+                return new ResultadoGeracaoImagemIa(
+                    Sucesso: true,
+                    Erro: null,
+                    ProvedorIa: "OpenAI DALL-E 3",
+                    PromptVisualUsado: promptOriginal,
+                    ImagemBase64DataUrl: b64OpenAi,
+                    BytesImagem: dalleBytes,
+                    ContentType: "image/png",
+                    SeloTopo: selo,
+                    TituloArte: titulo,
+                    SubtituloArte: subtitulo,
+                    BeneficiosExtraidos: beneficios,
+                    ChamadaCta: ctaExtraido,
+                    BotaoWhatsapp: whatsappExtraido,
+                    RodapeTexto: rodapeExtraido,
+                    LegendaSugerida: legenda,
+                    Largura: largura,
+                    Altura: altura);
+            }
+        }
+
+        // 2. Se escolheu Google Gemini / Imagen ou informou chave Gemini (AIza...)
+        var geminiKey = !string.IsNullOrWhiteSpace(apiKeyManual) && apiKeyManual.StartsWith("AIza", StringComparison.Ordinal)
+            ? apiKeyManual.Trim()
+            : _configuration["Gemini:ApiKey"] ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+
+        if (!string.IsNullOrWhiteSpace(geminiKey) &&
+            (modeloEscolhido.Contains("gemini", StringComparison.OrdinalIgnoreCase) ||
+             modeloEscolhido.Contains("imagen", StringComparison.OrdinalIgnoreCase) ||
+             (!string.IsNullOrWhiteSpace(apiKeyManual) && apiKeyManual.StartsWith("AIza", StringComparison.Ordinal))))
+        {
+            var geminiBytes = await GerarImagemGoogleGeminiAsync(client, geminiKey, promptOriginal, ehVertical, cancellationToken);
+            if (geminiBytes is { Length: > 1024 })
+            {
+                var b64Gemini = $"data:image/png;base64,{Convert.ToBase64String(geminiBytes)}";
+                return new ResultadoGeracaoImagemIa(
+                    Sucesso: true,
+                    Erro: null,
+                    ProvedorIa: "Google Gemini / Imagen 3",
+                    PromptVisualUsado: promptOriginal,
+                    ImagemBase64DataUrl: b64Gemini,
+                    BytesImagem: geminiBytes,
+                    ContentType: "image/png",
+                    SeloTopo: selo,
+                    TituloArte: titulo,
+                    SubtituloArte: subtitulo,
+                    BeneficiosExtraidos: beneficios,
+                    ChamadaCta: ctaExtraido,
+                    BotaoWhatsapp: whatsappExtraido,
+                    RodapeTexto: rodapeExtraido,
+                    LegendaSugerida: legenda,
+                    Largura: largura,
+                    Altura: altura);
+            }
+        }
+
+        // 3. Geração via Flux AI (Pollinations) com compactação inteligente de URL para não estourar limite HTTP de 450 caracteres no path
+        var seed = Random.Shared.Next(10000, 999999);
+        var modelosParaTentar = new[]
+        {
+            modeloEscolhido is "dalle3" or "gemini" ? "flux" : modeloEscolhido,
+            "flux",
+            "turbo"
+        }.Distinct().ToArray();
+
+        string? ultimoErro = null;
+
+        foreach (var mod in modelosParaTentar)
+        {
+            var urlFlux = ConstruirUrlPollinationsSegura(promptCenaVisual, largura, altura, seed, mod);
             try
             {
-                var dalleBytes = await GerarImagemOpenAiDalleAsync(client, openAiKey, promptOriginal, largura, altura, cancellationToken);
-                if (dalleBytes is { Length: > 1024 })
+                using var resp = await client.GetAsync(urlFlux, cancellationToken);
+                if (resp.IsSuccessStatusCode)
                 {
-                    return (dalleBytes, "image/png");
+                    var bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
+                    if (bytes.Length > 2048)
+                    {
+                        var ct = resp.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                        var b64 = $"data:{ct};base64,{Convert.ToBase64String(bytes)}";
+                        return new ResultadoGeracaoImagemIa(
+                            Sucesso: true,
+                            Erro: null,
+                            ProvedorIa: $"Flux AI ({mod})",
+                            PromptVisualUsado: promptCenaVisual,
+                            ImagemBase64DataUrl: b64,
+                            BytesImagem: bytes,
+                            ContentType: ct,
+                            SeloTopo: selo,
+                            TituloArte: titulo,
+                            SubtituloArte: subtitulo,
+                            BeneficiosExtraidos: beneficios,
+                            ChamadaCta: ctaExtraido,
+                            BotaoWhatsapp: whatsappExtraido,
+                            RodapeTexto: rodapeExtraido,
+                            LegendaSugerida: legenda,
+                            Largura: largura,
+                            Altura: altura);
+                    }
+                }
+                else
+                {
+                    ultimoErro = $"HTTP {(int)resp.StatusCode} ({resp.ReasonPhrase})";
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogWarning(ex, "Falha ao gerar via OpenAI DALL-E, usando Flux AI gratuito.");
+                ultimoErro = ex.Message;
+                _logger.LogWarning(ex, "Tentativa com modelo {Modelo} falhou em {Url}", mod, urlFlux);
             }
         }
 
-        // 2. Geração via Flux AI / Pollinations (100% Gratuito, sem API Key)
-        try
+        throw new InvalidOperationException(
+            $"O motor de IA gratuito está temporariamente ocupado ({ultimoErro ?? "timeout"}). Tente clicar novamente em 'Gerar Imagem' ou informe uma chave Gemini/OpenAI.");
+    }
+
+    private static string ConstruirUrlPollinationsSegura(
+        string promptVisual,
+        int largura,
+        int altura,
+        int seed,
+        string modelo)
+    {
+        // Limpa quebras de linha, markdown e símbolos que quebram a rota de path do Cloudflare/Pollinations
+        var limpo = Regex.Replace(promptVisual, @"[\r\n\t]+", " ");
+        limpo = Regex.Replace(limpo, @"[\*\#\""\`\[\]\(\)\{\}]+", "");
+        limpo = Regex.Replace(limpo, @"\s{2,}", " ").Trim();
+
+        // O path de URL do Pollinations falha se passar de ~380 caracteres antes do Uri.EscapeDataString
+        if (limpo.Length > 360)
         {
-            using var resp = await client.GetAsync(urlImagemGerada, cancellationToken);
-            if (resp.IsSuccessStatusCode)
+            limpo = limpo[..360].Trim();
+        }
+
+        var encoded = Uri.EscapeDataString(limpo);
+        return $"https://image.pollinations.ai/prompt/{encoded}?width={largura}&height={altura}&seed={seed}&nologo=true&model={Uri.EscapeDataString(modelo)}";
+    }
+
+    private static (
+        string PromptCenaVisual,
+        string TituloExtraido,
+        string SubtituloExtraido,
+        List<string> Beneficios,
+        string CtaExtraido,
+        string WhatsappExtraido,
+        string RodapeExtraido) AnalisarPromptEstruturado(string promptOriginal)
+    {
+        var texto = promptOriginal;
+        var beneficios = new List<string>();
+        var titulo = string.Empty;
+        var subtitulo = string.Empty;
+        var cta = string.Empty;
+        var whatsapp = string.Empty;
+        var rodape = string.Empty;
+
+        // Detecta marca entre aspas logo no início (ex: called "SCOOTER ACHADINHOS")
+        var matchBrand = Regex.Match(texto, @"called\s+\**\x22([^\x22]+)\x22\**", RegexOptions.IgnoreCase);
+        if (matchBrand.Success)
+        {
+            titulo = matchBrand.Groups[1].Value.Trim();
+        }
+
+        // Detecta frase abaixo do título ("Below the title, display: ...")
+        var matchSub = Regex.Match(texto, @"Below the title[^\x22]*\x22([^\x22]+)\x22", RegexOptions.IgnoreCase);
+        if (matchSub.Success)
+        {
+            subtitulo = matchSub.Groups[1].Value.Trim();
+        }
+
+        // Detecta itens numerados 1. "..." 2. "..." 3. "..."
+        foreach (Match m in Regex.Matches(texto, @"\d+\.\s*\x22([^\x22]+)\x22"))
+        {
+            var item = m.Groups[1].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(item) && beneficios.Count < 4)
             {
-                var bytes = await resp.Content.ReadAsByteArrayAsync(cancellationToken);
-                if (bytes.Length > 1024)
-                {
-                    var ct = resp.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
-                    return (bytes, ct);
-                }
+                beneficios.Add(item);
             }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+
+        // Detecta CALL TO ACTION
+        var matchCta = Regex.Match(texto, @"CALL TO ACTION:[\s\S]*?\x22([^\x22]+)\x22", RegexOptions.IgnoreCase);
+        if (matchCta.Success)
         {
-            _logger.LogWarning(ex, "Falha ao baixar imagem IA principal em {Url}. Usando fallback.", urlImagemGerada);
+            cta = matchCta.Groups[1].Value.Trim();
         }
 
-        var seed = Random.Shared.Next(1000, 99999);
-        var urlFallback = $"https://picsum.photos/seed/{seed}/{largura}/{altura}.jpg";
-        using var respFallback = await client.GetAsync(urlFallback, cancellationToken);
-        respFallback.EnsureSuccessStatusCode();
-        var bytesFallback = await respFallback.Content.ReadAsByteArrayAsync(cancellationToken);
-        return (bytesFallback, "image/jpeg");
+        // Detecta WHATSAPP SECTION
+        var matchWpp = Regex.Match(texto, @"WHATSAPP SECTION:[\s\S]*?\x22([^\x22]+)\x22", RegexOptions.IgnoreCase);
+        if (matchWpp.Success)
+        {
+            whatsapp = matchWpp.Groups[1].Value.Trim();
+        }
+
+        // Detecta FOOTER
+        var matchFooter = Regex.Match(texto, @"FOOTER:[\s\S]*?\x22([^\x22]+)\x22", RegexOptions.IgnoreCase);
+        if (matchFooter.Success)
+        {
+            rodape = matchFooter.Groups[1].Value.Trim();
+        }
+
+        // Extrai MAIN VISUAL + VISUAL IDENTITY se existirem para enviar um prompt fotográfico cirúrgico ao gerador
+        var matchMainVisual = Regex.Match(
+            texto,
+            @"MAIN VISUAL:\**\s*([\s\S]*?)(?:\*\*PROMOTIONAL|\*\*CALL|\*\*WHATSAPP|\*\*FOOTER|\*\*IMPORTANT|$)",
+            RegexOptions.IgnoreCase);
+
+        var matchVisualIdentity = Regex.Match(
+            texto,
+            @"VISUAL IDENTITY:\**\s*([\s\S]*?)(?:\*\*MAIN HEADER|\*\*MAIN VISUAL|$)",
+            RegexOptions.IgnoreCase);
+
+        if (matchMainVisual.Success)
+        {
+            var visual = matchMainVisual.Groups[1].Value.Trim();
+            var identity = matchVisualIdentity.Success ? matchVisualIdentity.Groups[1].Value.Trim() : string.Empty;
+            var combinado = $"{visual}. {identity}. Professional commercial photography, 8k, ultra detailed, dramatic studio lighting, no text";
+            return (combinado, titulo, subtitulo, beneficios, cta, whatsapp, rodape);
+        }
+
+        // Caso seja um prompt livre comum
+        var cenaLivre = texto.Length > 340
+            ? $"{texto[..340]}, professional commercial photography, ultra detailed, 8k"
+            : $"{texto}, professional commercial photography, ultra detailed, cinematic lighting, 8k";
+
+        return (cenaLivre, titulo, subtitulo, beneficios, cta, whatsapp, rodape);
     }
 
     private static async Task<byte[]?> GerarImagemOpenAiDalleAsync(
@@ -170,7 +359,7 @@ public sealed class CriadorImagemNichoService
             JsonSerializer.Serialize(new
             {
                 model = "dall-e-3",
-                prompt,
+                prompt = prompt.Length > 3800 ? prompt[..3800] : prompt,
                 n = 1,
                 size,
                 response_format = "b64_json"
@@ -189,17 +378,57 @@ public sealed class CriadorImagemNichoService
         return string.IsNullOrWhiteSpace(b64) ? null : Convert.FromBase64String(b64);
     }
 
+    private static async Task<byte[]?> GerarImagemGoogleGeminiAsync(
+        HttpClient client,
+        string apiKey,
+        string prompt,
+        bool ehVertical,
+        CancellationToken cancellationToken)
+    {
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={Uri.EscapeDataString(apiKey.Trim())}";
+        using var req = new HttpRequestMessage(HttpMethod.Post, url);
+        req.Content = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                instances = new[] { new { prompt } },
+                parameters = new
+                {
+                    sampleCount = 1,
+                    aspectRatio = ehVertical ? "9:16" : "1:1"
+                }
+            }),
+            Encoding.UTF8,
+            "application/json");
+
+        using var resp = await client.SendAsync(req, cancellationToken);
+        if (!resp.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        using var doc = await JsonDocument.ParseAsync(await resp.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+        if (doc.RootElement.TryGetProperty("predictions", out var preds) &&
+            preds.GetArrayLength() > 0 &&
+            preds[0].TryGetProperty("bytesBase64Encoded", out var b64Prop))
+        {
+            var b64 = b64Prop.GetString();
+            return string.IsNullOrWhiteSpace(b64) ? null : Convert.FromBase64String(b64);
+        }
+
+        return null;
+    }
+
     private static string GerarTituloImpacto(string prompt)
     {
-        var limpo = prompt.Trim();
-        if (limpo.Length <= 58)
+        var limpo = Regex.Replace(prompt.Trim(), @"[\r\n\*]+", " ");
+        if (limpo.Length <= 52)
         {
             return limpo.ToUpperInvariant();
         }
 
-        var cortado = limpo[..58];
+        var cortado = limpo[..52];
         var ultimoEspaco = cortado.LastIndexOf(' ');
-        if (ultimoEspaco > 20)
+        if (ultimoEspaco > 18)
         {
             cortado = cortado[..ultimoEspaco];
         }
@@ -207,37 +436,43 @@ public sealed class CriadorImagemNichoService
         return $"{cortado.ToUpperInvariant()}...";
     }
 
-    private static string GerarLegendaPorPrompt(string prompt, string arroba)
+    private static string GerarLegendaPorPrompt(
+        string promptOriginal,
+        string titulo,
+        string subtitulo,
+        IReadOnlyList<string> beneficios,
+        string arroba)
     {
-        var palavrasHashtags = prompt
-            .Split([' ', ',', '.', '!', '?', '-', '/', ':'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => new string(p.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant())
-            .Where(p => p.Length >= 4)
-            .Distinct()
-            .Take(5)
-            .Select(p => $"#{p}")
-            .ToList();
-
-        if (palavrasHashtags.Count == 0)
+        var sb = new StringBuilder();
+        sb.AppendLine($"🔥 {titulo}");
+        if (!string.IsNullOrWhiteSpace(subtitulo))
         {
-            palavrasHashtags.AddRange(["#destaque", "#novidades", "#instagram"]);
+            sb.AppendLine($"✨ {subtitulo}");
+        }
+        sb.AppendLine();
+
+        if (beneficios.Count > 0)
+        {
+            foreach (var b in beneficios)
+            {
+                sb.AppendLine($"✅ {b}");
+            }
+            sb.AppendLine();
         }
         else
         {
-            palavrasHashtags.Add("#destaque");
-            palavrasHashtags.Add("#novidades");
+            var resumo = promptOriginal.Length > 280 ? $"{promptOriginal[..280]}..." : promptOriginal;
+            sb.AppendLine(resumo);
+            sb.AppendLine();
         }
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"✨ {char.ToUpperInvariant(prompt[0])}{prompt[1..]}");
-        sb.AppendLine();
-        sb.AppendLine("👉 Gostou? Salve este post para não perder e confira o link na nossa Bio para mais detalhes!");
+        sb.AppendLine("👉 Entre no nosso grupo e confira o link na Bio para aproveitar as melhores ofertas!");
         if (!string.IsNullOrWhiteSpace(arroba))
         {
-            sb.AppendLine($"📲 Siga nosso perfil: {arroba}");
+            sb.AppendLine($"📲 Siga: {arroba}");
         }
         sb.AppendLine();
-        sb.Append(string.Join(' ', palavrasHashtags));
+        sb.Append("#scooterachadinhos #scooter #nmax #ofertas #achadinhos #acessorios #descontos #motociclismo");
         return sb.ToString();
     }
 }
