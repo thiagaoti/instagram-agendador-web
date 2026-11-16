@@ -13,16 +13,13 @@ public sealed class IndexModel : PageModel
 {
     private readonly IDbContextFactory<AgendadorDbContext> _dbFactory;
     private readonly InstagramAgendadorService _agendadorService;
-    private readonly CriadorImagemNichoService _criadorImagemService;
 
     public IndexModel(
         IDbContextFactory<AgendadorDbContext> dbFactory,
-        InstagramAgendadorService agendadorService,
-        CriadorImagemNichoService criadorImagemService)
+        InstagramAgendadorService agendadorService)
     {
         _dbFactory = dbFactory;
         _agendadorService = agendadorService;
-        _criadorImagemService = criadorImagemService;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -44,182 +41,6 @@ public sealed class IndexModel : PageModel
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await CarregarPainelAsync(cancellationToken);
-    }
-
-    public async Task<IActionResult> OnPostGerarImagemEAgendarAsync(
-        [FromForm] int instagramContaId,
-        [FromForm] string? modeloIa,
-        [FromForm] string? apiKeyManual,
-        [FromForm] string promptCriacao,
-        [FromForm] string formatoDestino,
-        [FromForm] string? seloTopo,
-        [FromForm] string? tituloArte,
-        [FromForm] string? subtituloArte,
-        [FromForm] string? legendaCustomizada,
-        [FromForm] string? modoHorario,
-        [FromForm] string? horarioEspecificoLocal,
-        [FromForm] string? horariosDiariosStory,
-        [FromForm] bool publicarImediatamente,
-        [FromForm] string? imagemCompostaBase64,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(promptCriacao))
-            {
-                throw new ArgumentException("Digite o prompt descrevendo a imagem que deseja criar.");
-            }
-
-            var conta = await _agendadorService.ObterContaPorIdAsync(instagramContaId, cancellationToken)
-                ?? throw new InvalidOperationException("Selecione um perfil do Instagram válido.");
-
-            byte[] bytesImagem;
-            string contentType = "image/jpeg";
-            string provedorIa = modeloIa ?? "Flux AI";
-            string tituloSugerido = "Publicação IA";
-            string legendaSugerida = promptCriacao;
-
-            if (!string.IsNullOrWhiteSpace(imagemCompostaBase64))
-            {
-                var base64Limpo = imagemCompostaBase64.Trim();
-                var idxVirgula = base64Limpo.IndexOf(',');
-                if (idxVirgula >= 0)
-                {
-                    base64Limpo = base64Limpo[(idxVirgula + 1)..];
-                }
-
-                bytesImagem = Convert.FromBase64String(base64Limpo);
-            }
-            else
-            {
-                var gerada = await _criadorImagemService.GerarImagemPorPromptAsync(
-                    promptCriacao,
-                    formatoDestino,
-                    conta.IdentificadorInstagram,
-                    tituloArte,
-                    seloTopo,
-                    subtituloArte,
-                    modeloIa,
-                    apiKeyManual,
-                    cancellationToken);
-
-                bytesImagem = gerada.BytesImagem;
-                contentType = gerada.ContentType;
-                provedorIa = gerada.ProvedorIa;
-                tituloSugerido = gerada.TituloArte;
-                legendaSugerida = gerada.LegendaSugerida;
-            }
-
-            var tituloFinal = !string.IsNullOrWhiteSpace(tituloArte)
-                ? tituloArte.Trim()
-                : tituloSugerido;
-            if (tituloFinal.Length > 140)
-            {
-                tituloFinal = tituloFinal[..140];
-            }
-
-            var legendaFinal = !string.IsNullOrWhiteSpace(legendaCustomizada)
-                ? legendaCustomizada.Trim()
-                : legendaSugerida;
-
-            if (string.Equals(formatoDestino, "StoryRecorrente", StringComparison.OrdinalIgnoreCase))
-            {
-                var story = await _agendadorService.CriarStoryRecorrenteAsync(
-                    instagramContaId,
-                    tituloFinal,
-                    bytesImagem,
-                    contentType,
-                    ModoStoryRecorrente.RecorrenteDiario,
-                    horariosDiariosStory,
-                    dataHoraUnicaLocal: null,
-                    ObterBaseUrlPublica(),
-                    cancellationToken);
-
-                if (publicarImediatamente)
-                {
-                    var (sucessoStory, msgStory) = await _agendadorService.PublicarStoryRecorrenteAgoraAsync(
-                        story.Id,
-                        ObterBaseUrlPublica(),
-                        cancellationToken);
-
-                    if (!sucessoStory)
-                    {
-                        TempData["TipoMensagem"] = "erro";
-                    }
-
-                    TempData["Mensagem"] = msgStory;
-                }
-                else
-                {
-                    TempData["Mensagem"] =
-                        $"Imagem gerada via prompt ({provedorIa}) e programada como Story Recorrente para {story.IdentificadorInstagram} (próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm})!";
-                }
-
-                return RedirectToPage(new { ContaId = instagramContaId });
-            }
-
-            DateTime? horarioEscolhido = null;
-            if (string.Equals(modoHorario, "manual", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!DateTime.TryParseExact(
-                        (horarioEspecificoLocal ?? string.Empty).Trim(),
-                        ["yyyy-MM-ddTHH:mm", "yyyy-MM-dd HH:mm", "dd/MM/yyyy HH:mm"],
-                        CultureInfo.InvariantCulture,
-                        DateTimeStyles.None,
-                        out var parsed))
-                {
-                    throw new ArgumentException("Informe uma data e horário válidos para o agendamento.");
-                }
-
-                horarioEscolhido = parsed;
-            }
-
-            var tipoMidia = formatoDestino switch
-            {
-                "Stories" => TipoMidiaInstagram.Stories,
-                "FeedEStories" => TipoMidiaInstagram.FeedEStories,
-                _ => TipoMidiaInstagram.Feed
-            };
-
-            var post = await _agendadorService.CriarPostAgendadoAsync(
-                instagramContaId,
-                tituloFinal,
-                legendaFinal,
-                tipoMidia,
-                bytesImagem,
-                contentType,
-                urlImagemExterna: null,
-                horarioEscolhido,
-                ObterBaseUrlPublica(),
-                cancellationToken);
-
-            if (publicarImediatamente)
-            {
-                var (sucesso, msgPub) = await _agendadorService.PublicarPostAgoraAsync(
-                    post.Id,
-                    ObterBaseUrlPublica(),
-                    cancellationToken);
-
-                if (!sucesso)
-                {
-                    TempData["TipoMensagem"] = "erro";
-                }
-
-                TempData["Mensagem"] = msgPub;
-            }
-            else
-            {
-                TempData["Mensagem"] =
-                    $"Imagem criada via prompt ({provedorIa}) e agendada com sucesso para {post.IdentificadorInstagram} em {post.HorarioProgramadoLocal:dd/MM/yyyy 'às' HH:mm}!";
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            TempData["TipoMensagem"] = "erro";
-            TempData["Mensagem"] = ex.GetBaseException().Message;
-        }
-
-        return RedirectToPage(new { ContaId = instagramContaId });
     }
 
     public async Task<IActionResult> OnPostCriarPostAgendadoAsync(

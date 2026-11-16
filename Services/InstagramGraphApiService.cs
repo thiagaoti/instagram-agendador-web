@@ -34,9 +34,7 @@ public sealed class InstagramGraphApiService
     {
         var accountId = (conta.AccountIdMeta ?? string.Empty).Trim();
         var accessToken = (conta.AccessTokenMeta ?? string.Empty).Trim();
-        var baseUrl = string.IsNullOrWhiteSpace(conta.GraphApiBaseUrl)
-            ? "https://graph.facebook.com/v21.0"
-            : conta.GraphApiBaseUrl.Trim().TrimEnd('/');
+        var baseUrl = ResolverBaseUrlMeta(conta.GraphApiBaseUrl, accessToken);
 
         if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(accessToken))
         {
@@ -114,9 +112,7 @@ public sealed class InstagramGraphApiService
     {
         var accountId = (conta.AccountIdMeta ?? string.Empty).Trim();
         var accessToken = (conta.AccessTokenMeta ?? string.Empty).Trim();
-        var baseUrl = string.IsNullOrWhiteSpace(conta.GraphApiBaseUrl)
-            ? "https://graph.facebook.com/v21.0"
-            : conta.GraphApiBaseUrl.Trim().TrimEnd('/');
+        var baseUrl = ResolverBaseUrlMeta(conta.GraphApiBaseUrl, accessToken);
 
         if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(accessToken))
         {
@@ -317,6 +313,11 @@ public sealed class InstagramGraphApiService
                     : msg;
                 if (!string.IsNullOrWhiteSpace(detalhe))
                 {
+                    if (code == "200" && detalhe.Contains("API access blocked", StringComparison.OrdinalIgnoreCase))
+                    {
+                        detalhe += " — Causa na Meta: (1) Para publicar STORIES via API, a conta do Instagram precisa estar como 'Empresarial (Business)' e não 'Criador de Conteúdo (Creator)' no app do Instagram; (2) Verifique se o Access Token foi gerado com a permissão 'instagram_content_publish' marcada; ou (3) Se o App na Meta estiver em Modo Desenvolvimento, a conta precisa aceitar o convite de Testador.";
+                    }
+
                     return string.IsNullOrWhiteSpace(code)
                         ? $"HTTP {statusCode}: {detalhe}"
                         : $"HTTP {statusCode} [Código Meta {code}]: {detalhe}";
@@ -329,5 +330,18 @@ public sealed class InstagramGraphApiService
 
         var truncado = corpoJson.Length > 400 ? corpoJson[..400] : corpoJson;
         return $"HTTP {statusCode}: {truncado}";
+    }
+
+    private static string ResolverBaseUrlMeta(string? baseUrlConfigurada, string accessToken)
+    {
+        if (accessToken.StartsWith("IGAA", StringComparison.OrdinalIgnoreCase) ||
+            accessToken.StartsWith("IGQ", StringComparison.OrdinalIgnoreCase))
+        {
+            return "https://graph.instagram.com/v21.0";
+        }
+
+        return string.IsNullOrWhiteSpace(baseUrlConfigurada)
+            ? "https://graph.facebook.com/v21.0"
+            : baseUrlConfigurada.Trim().TrimEnd('/');
     }
 }

@@ -66,7 +66,6 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<InstagramGraphApiService>();
-builder.Services.AddSingleton<CriadorImagemNichoService>();
 builder.Services.AddSingleton<InstagramAgendadorService>();
 builder.Services.AddHostedService<InstagramAgendadorWorker>();
 
@@ -158,62 +157,6 @@ app.MapGet("/media/story/{id:int}.jpg", async (
 
     return Results.File(story.ConteudoImagem, contentType);
 }).AllowAnonymous();
-
-app.MapPost("/api/criador/gerar-imagem", async (
-    HttpContext httpContext,
-    CriadorImagemNichoService criadorService,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        using var doc = await System.Text.Json.JsonDocument.ParseAsync(
-            httpContext.Request.Body,
-            cancellationToken: cancellationToken);
-        var root = doc.RootElement;
-
-        string ObterStr(string nome) =>
-            root.TryGetProperty(nome, out var p) && p.ValueKind == System.Text.Json.JsonValueKind.String
-                ? p.GetString() ?? string.Empty
-                : string.Empty;
-
-        var resultado = await criadorService.GerarImagemPorPromptAsync(
-            promptUsuario: ObterStr("prompt"),
-            formato: ObterStr("formato"),
-            identificadorInstagram: ObterStr("arroba"),
-            tituloCustomizado: ObterStr("titulo"),
-            seloCustomizado: ObterStr("selo"),
-            subtituloCustomizado: ObterStr("subtitulo"),
-            modeloIa: ObterStr("modeloIa"),
-            apiKeyManual: ObterStr("apiKeyManual"),
-            cancellationToken: cancellationToken);
-
-        return Results.Ok(new
-        {
-            resultado.Sucesso,
-            resultado.ProvedorIa,
-            resultado.PromptVisualUsado,
-            resultado.ImagemBase64DataUrl,
-            resultado.SeloTopo,
-            resultado.TituloArte,
-            resultado.SubtituloArte,
-            resultado.BeneficiosExtraidos,
-            resultado.ChamadaCta,
-            resultado.BotaoWhatsapp,
-            resultado.RodapeTexto,
-            resultado.LegendaSugerida,
-            resultado.Largura,
-            resultado.Altura
-        });
-    }
-    catch (Exception ex) when (ex is not OperationCanceledException)
-    {
-        return Results.BadRequest(new
-        {
-            sucesso = false,
-            erro = ex.GetBaseException().Message
-        });
-    }
-});
 
 app.MapRazorPages();
 
