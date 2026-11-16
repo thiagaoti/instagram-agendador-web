@@ -48,7 +48,7 @@ public sealed class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostGerarImagemEAgendarAsync(
         [FromForm] int instagramContaId,
-        [FromForm] string nicho,
+        [FromForm] string? modeloIa,
         [FromForm] string promptCriacao,
         [FromForm] string formatoDestino,
         [FromForm] string? seloTopo,
@@ -66,20 +66,20 @@ public sealed class IndexModel : PageModel
         {
             if (string.IsNullOrWhiteSpace(promptCriacao))
             {
-                throw new ArgumentException("Digite o prompt ou tema dentro do seu nicho para gerar a imagem.");
+                throw new ArgumentException("Digite o prompt descrevendo a imagem que deseja criar.");
             }
 
             var conta = await _agendadorService.ObterContaPorIdAsync(instagramContaId, cancellationToken)
                 ?? throw new InvalidOperationException("Selecione um perfil do Instagram válido.");
 
-            var sugestao = _criadorImagemService.GerarSugestaoCriativa(
-                nicho,
+            var sugestao = _criadorImagemService.GerarSugestaoPorPrompt(
                 promptCriacao,
                 formatoDestino,
                 conta.IdentificadorInstagram,
                 tituloArte,
                 seloTopo,
-                subtituloArte);
+                subtituloArte,
+                modeloIa);
 
             byte[] bytesImagem;
             string contentType = "image/jpeg";
@@ -101,12 +101,13 @@ public sealed class IndexModel : PageModel
                     sugestao.UrlImagemGerada,
                     sugestao.Largura,
                     sugestao.Altura,
+                    sugestao.PromptOriginal,
                     cancellationToken);
             }
 
             var tituloFinal = !string.IsNullOrWhiteSpace(tituloArte)
                 ? tituloArte.Trim()
-                : $"[{sugestao.Nicho.ToUpperInvariant()}] {sugestao.TituloArte}";
+                : sugestao.TituloArte;
             if (tituloFinal.Length > 140)
             {
                 tituloFinal = tituloFinal[..140];
@@ -146,7 +147,7 @@ public sealed class IndexModel : PageModel
                 else
                 {
                     TempData["Mensagem"] =
-                        $"Imagem do nicho '{sugestao.Nicho}' gerada via prompt e programada como Story Recorrente para {story.IdentificadorInstagram} (próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm})!";
+                        $"Imagem gerada via prompt ({sugestao.ProvedorIa}) e programada como Story Recorrente para {story.IdentificadorInstagram} (próximo disparo: {story.ProximoDisparoLocal:dd/MM/yyyy 'às' HH:mm})!";
                 }
 
                 return RedirectToPage(new { ContaId = instagramContaId });
@@ -204,7 +205,7 @@ public sealed class IndexModel : PageModel
             else
             {
                 TempData["Mensagem"] =
-                    $"Arte gerada pelo prompt no nicho '{sugestao.Nicho}' e agendada com sucesso para {post.IdentificadorInstagram} em {post.HorarioProgramadoLocal:dd/MM/yyyy 'às' HH:mm}!";
+                    $"Imagem criada via prompt ({sugestao.ProvedorIa}) e agendada com sucesso para {post.IdentificadorInstagram} em {post.HorarioProgramadoLocal:dd/MM/yyyy 'às' HH:mm}!";
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

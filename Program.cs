@@ -160,32 +160,32 @@ app.MapGet("/media/story/{id:int}.jpg", async (
 }).AllowAnonymous();
 
 app.MapGet("/api/criador/sugestao", (
-    string? nicho,
     string? prompt,
     string? formato,
     string? arroba,
     string? titulo,
     string? selo,
     string? subtitulo,
+    string? modeloIa,
     CriadorImagemNichoService criadorService) =>
 {
-    var sugestao = criadorService.GerarSugestaoCriativa(
-        nicho ?? "ofertas",
+    var sugestao = criadorService.GerarSugestaoPorPrompt(
         prompt ?? string.Empty,
         formato ?? "Feed",
         arroba,
         titulo,
         selo,
-        subtitulo);
+        subtitulo,
+        modeloIa);
 
     var urlLocalProxy =
-        $"/api/criador/imagem-gerada?url={Uri.EscapeDataString(sugestao.UrlImagemGerada)}&w={sugestao.Largura}&h={sugestao.Altura}";
+        $"/api/criador/imagem-gerada?url={Uri.EscapeDataString(sugestao.UrlImagemGerada)}&w={sugestao.Largura}&h={sugestao.Altura}&prompt={Uri.EscapeDataString(sugestao.PromptOriginal)}";
 
     return Results.Ok(new
     {
-        sugestao.Nicho,
         sugestao.PromptOriginal,
         sugestao.PromptVisualOtimizado,
+        sugestao.ProvedorIa,
         sugestao.UrlImagemGerada,
         urlImagemProxy = urlLocalProxy,
         sugestao.SeloTopo,
@@ -201,6 +201,7 @@ app.MapGet("/api/criador/imagem-gerada", async (
     string url,
     int? w,
     int? h,
+    string? prompt,
     CriadorImagemNichoService criadorService,
     CancellationToken cancellationToken) =>
 {
@@ -210,6 +211,7 @@ app.MapGet("/api/criador/imagem-gerada", async (
         url,
         largura,
         altura,
+        prompt,
         cancellationToken);
 
     return Results.File(bytes, contentType);

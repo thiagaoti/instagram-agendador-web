@@ -427,16 +427,16 @@ else
         </div>
     </section>
 
-    <!-- ESTÚDIO IA: CRIAR IMAGEM POR NICHO VIA PROMPT E JÁ AGENDAR -->
+    <!-- ESTÚDIO IA: CRIAR IMAGEM DIRETO POR PROMPT E JÁ AGENDAR -->
     <section class="dash-section studio-highlight">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
             <span class="pill agendado" style="background:#1c2548;border-color:#4458a8;color:#93c5fd;">
-                ✨ NOVO · ESTÚDIO CRIADOR DE IMAGEM IA POR NICHO
+                ✨ GERADOR DE IMAGEM IA DIRETO POR PROMPT (FLUX AI / DALL-E 3)
             </span>
         </div>
-        <h2 class="dash-section-title">Criar Imagem por Nicho via Prompt & Já Agendar</h2>
+        <h2 class="dash-section-title">Criar Imagem via Prompt de IA & Já Agendar</h2>
         <p class="dash-section-desc">
-            Escolha o seu nicho, digite o que você quer na imagem (prompt), gere a foto + arte com chamada + legenda com hashtags e já agende direto para o Feed ou Stories!
+            Digite livremente o seu prompt descrevendo a imagem que deseja criar. A IA gera a foto na hora, monta a arte (com ou sem texto sobreposto) e já agenda para o seu Instagram!
         </p>
 
         <form method="post"
@@ -482,18 +482,12 @@ else
                         </div>
 
                         <div class="field">
-                            <label for="studioNicho">Nicho do Conteúdo</label>
-                            <select id="studioNicho" name="nicho">
-                                <option value="ofertas">🔥 Ofertas, Achadinhos & Promoções</option>
-                                <option value="moda">👗 Moda, Roupas & Acessórios</option>
-                                <option value="beleza">💄 Beleza, Estética & Cosméticos</option>
-                                <option value="fitness">💪 Fitness, Academia & Saúde</option>
-                                <option value="gastronomia">🍔 Gastronomia, Delivery & Lanches</option>
-                                <option value="tecnologia">📱 Tecnologia, Games & Eletrônicos</option>
-                                <option value="automotivo">🏍️ Motos, Automotivo & Peças</option>
-                                <option value="imoveis">🏡 Imóveis, Arquitetura & Decoração</option>
-                                <option value="negocios">📈 Negócios, Finanças & Marketing</option>
-                                <option value="motivacional">✨ Frases, Motivacional & Lifestyle</option>
+                            <label for="studioModeloIa">Motor de IA Gerador da Imagem</label>
+                            <select id="studioModeloIa" name="modeloIa">
+                                <option value="flux" selected>⚡ Flux AI (Gratuito · Sem Chave API)</option>
+                                <option value="flux-realism">📸 Flux Realism (Fotorealista · Gratuito)</option>
+                                <option value="flux-3d">🧊 Flux 3D Render (Gratuito)</option>
+                                <option value="dalle3">🤖 OpenAI DALL-E 3 (Usa OPENAI_API_KEY ou Flux)</option>
                             </select>
                         </div>
 
@@ -510,20 +504,20 @@ else
                         <div class="field">
                             <label for="studioEstiloArte">Acabamento da Imagem</label>
                             <select id="studioEstiloArte">
-                                <option value="completo" selected>Foto IA + Moldura com Título e Selo</option>
-                                <option value="limpo">Somente Foto Gerada por IA (Sem Textos)</option>
+                                <option value="limpo" selected>Somente a Imagem Gerada pela IA (Sem Textos)</option>
+                                <option value="completo">Imagem IA + Moldura com Título e Chamada</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="field" style="margin-top:12px;">
-                        <label for="studioPrompt">Prompt: O que você quer buscar/criar dentro deste nicho?</label>
+                        <label for="studioPrompt">Digite o seu Prompt (descreva exatamente a imagem que a IA deve criar)</label>
                         <input id="studioPrompt"
                                name="promptCriacao"
                                type="text"
-                               placeholder="Ex.: Tênis esportivo moderno em oferta relâmpago / Hambúrguer artesanal com bacon / Dica de treino..."
+                               placeholder="Ex.: Uma scooter vermelha moderna estacionada em uma avenida iluminada à noite, estilo fotografia comercial 8k..."
                                required />
-                        <small>Descreva o produto, tema ou cena. O sistema busca/gera a foto no estilo do nicho e monta a arte + legenda.</small>
+                        <small>Pode escrever em português ou inglês. A IA cria a imagem do zero a partir da sua descrição.</small>
                     </div>
 
                     <div class="form-grid" style="margin-top:12px;">
@@ -1165,7 +1159,7 @@ else
         const canvas = document.getElementById("studioCanvasPreview");
         const btnGerarPrevia = document.getElementById("btnGerarPreviaPrompt");
         const studioContaIg = document.getElementById("studioContaIg");
-        const studioNicho = document.getElementById("studioNicho");
+        const studioModeloIa = document.getElementById("studioModeloIa");
         const studioFormato = document.getElementById("studioFormato");
         const studioEstiloArte = document.getElementById("studioEstiloArte");
         const studioPrompt = document.getElementById("studioPrompt");
@@ -1362,7 +1356,7 @@ else
                 return false;
             }
 
-            const nicho = studioNicho ? studioNicho.value : "ofertas";
+            const modeloIa = studioModeloIa ? studioModeloIa.value : "flux";
             const formato = studioFormato ? studioFormato.value : "Feed";
             const prompt = studioPrompt.value.trim();
             let arroba = "";
@@ -1372,15 +1366,15 @@ else
 
             if (btnGerarPrevia) {
                 btnGerarPrevia.disabled = true;
-                btnGerarPrevia.textContent = "⏳ Gerando imagem IA do nicho...";
+                btnGerarPrevia.textContent = "⏳ Gerando imagem via IA...";
             }
             if (studioStatusLabel) {
-                studioStatusLabel.textContent = "Buscando e montando imagem para o seu nicho...";
+                studioStatusLabel.textContent = "Gerando imagem pelo seu prompt...";
             }
 
             try {
                 const params = new URLSearchParams({
-                    nicho,
+                    modeloIa,
                     prompt,
                     formato,
                     arroba
