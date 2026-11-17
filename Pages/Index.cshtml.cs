@@ -619,56 +619,18 @@ public sealed class IndexModel : PageModel
         TotalFalhas = PostsAgendados.Count(p => p.Status == StatusPostInstagram.Falha)
             + StoriesRecorrentes.Count(s => !string.IsNullOrWhiteSpace(s.UltimoErro));
 
-        // Monta o Calendário do Mês (exibe todas as contas acessíveis pelo usuário para visão completa)
+        // Monta o Calendário do Mês respeitando estritamente o Instagram Ativo selecionado (ContaSelecionada)
         var agora = AgoraSaoPaulo;
         AnoCalendario = Ano is >= 2024 and <= 2035 ? Ano.Value : agora.Year;
         MesCalendario = Mes is >= 1 and <= 12 ? Mes.Value : agora.Month;
 
-        var idsPermitidos = ContasDisponiveis.Select(c => c.Id).ToHashSet();
-        var postsCalendario = EhAdmin && ContasDisponiveis.Count > 1
-            ? await db.PostsAgendados
-                .AsNoTracking()
-                .Where(p => idsPermitidos.Contains(p.InstagramContaId) && p.Status != StatusPostInstagram.Cancelado)
-                .OrderByDescending(p => p.Id)
-                .Take(250)
-                .Select(p => new InstagramPostAgendado
-                {
-                    Id = p.Id,
-                    InstagramContaId = p.InstagramContaId,
-                    IdentificadorInstagram = p.IdentificadorInstagram,
-                    Titulo = p.Titulo,
-                    TipoPublicacao = p.TipoPublicacao,
-                    UrlImagemExterna = p.UrlImagemExterna,
-                    HorarioProgramadoLocal = p.HorarioProgramadoLocal,
-                    RecorrenteSemanal = p.RecorrenteSemanal,
-                    DiasSemanaJson = p.DiasSemanaJson,
-                    HorarioFixoSemanal = p.HorarioFixoSemanal,
-                    Status = p.Status,
-                    CriadoEmUtc = p.CriadoEmUtc
-                })
-                .ToListAsync(cancellationToken)
-            : PostsAgendados.Where(p => p.Status != StatusPostInstagram.Cancelado).ToList();
+        var postsCalendario = PostsAgendados
+            .Where(p => p.Status != StatusPostInstagram.Cancelado)
+            .ToList();
 
-        var storiesCalendario = EhAdmin && ContasDisponiveis.Count > 1
-            ? await db.StoriesRecorrentes
-                .AsNoTracking()
-                .Where(s => idsPermitidos.Contains(s.InstagramContaId) && s.Ativo)
-                .Select(s => new InstagramStoryRecorrente
-                {
-                    Id = s.Id,
-                    InstagramContaId = s.InstagramContaId,
-                    IdentificadorInstagram = s.IdentificadorInstagram,
-                    Titulo = s.Titulo,
-                    ModoAgendamento = s.ModoAgendamento,
-                    HorariosDiariosJson = s.HorariosDiariosJson,
-                    DiasSemanaJson = s.DiasSemanaJson,
-                    ProximoDisparoLocal = s.ProximoDisparoLocal,
-                    Ativo = s.Ativo,
-                    Status = s.Status,
-                    CriadoEmUtc = s.CriadoEmUtc
-                })
-                .ToListAsync(cancellationToken)
-            : StoriesRecorrentes.Where(s => s.Ativo).ToList();
+        var storiesCalendario = StoriesRecorrentes
+            .Where(s => s.Ativo)
+            .ToList();
 
         var mapaDias = new Dictionary<int, List<ItemCalendarioMes>>();
         var totalDiasNoMes = DateTime.DaysInMonth(AnoCalendario, MesCalendario);
