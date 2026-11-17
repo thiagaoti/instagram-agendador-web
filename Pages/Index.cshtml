@@ -329,6 +329,182 @@
         cursor: pointer;
     }
 
+    /* Calendário Mensal com Miniaturas Redondas */
+    .cal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
+
+    .cal-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .cal-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .cal-weekday {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 850;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 6px 4px;
+    }
+
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .cal-day {
+        min-height: 112px;
+        padding: 8px 6px;
+        background: var(--panel-alt);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .cal-day.empty {
+        background: #100d19;
+        border-color: #1f1930;
+        opacity: 0.45;
+    }
+
+    .cal-day.today {
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 1px #ff4f8b66;
+        background: linear-gradient(180deg, #21152b 0%, #120f1c 100%);
+    }
+
+    .cal-day-num {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 850;
+        color: #cfc3e4;
+        padding: 0 2px;
+    }
+
+    .cal-day.today .cal-day-num span:first-child {
+        background: var(--accent);
+        color: #16050c;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 11px;
+    }
+
+    .cal-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        align-items: flex-start;
+        margin-top: 2px;
+    }
+
+    .cal-post-bubble {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        width: 68px;
+        max-width: 100%;
+        transition: transform .15s ease;
+    }
+
+    .cal-post-bubble:hover {
+        transform: translateY(-2px);
+    }
+
+    .cal-thumb-ring {
+        width: 46px;
+        height: 46px;
+        padding: 2.5px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff4f8b, #ff7a59, #a855f7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-shadow: 0 4px 12px #00000066;
+    }
+
+    .cal-thumb-ring.publicado {
+        background: linear-gradient(135deg, #10b981, #39e58c);
+    }
+
+    .cal-thumb-ring.falha {
+        background: linear-gradient(135deg, #ef4444, #ff7b7b);
+    }
+
+    .cal-thumb-ring img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #0d0b14;
+        border: 2px solid #120f1c;
+    }
+
+    .cal-bubble-time {
+        position: absolute;
+        bottom: -4px;
+        background: #0d0b14;
+        color: #ffd089;
+        border: 1px solid #473869;
+        border-radius: 6px;
+        padding: 1px 4px;
+        font-size: 8.5px;
+        font-weight: 850;
+        line-height: 1.1;
+    }
+
+    .cal-bubble-handle {
+        margin-top: 5px;
+        font-size: 9.5px;
+        font-weight: 800;
+        color: #f5effa;
+        max-width: 68px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+    }
+
+    @@media (max-width: 780px) {
+        .cal-weekdays {
+            display: none;
+        }
+        .cal-grid {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+        }
+        .cal-day.empty {
+            display: none;
+        }
+        .cal-day {
+            min-height: 92px;
+        }
+    }
+
     @@media (max-width: 780px) {
         .split-layout,
         .split-layout-studio,
@@ -457,6 +633,92 @@ else
             <div class="metric-val warn">
                 @proximoSlotPadrao.ToString("dd/MM 'às' HH:mm", cultura)
             </div>
+        </div>
+    </section>
+
+    <!-- CALENDÁRIO MENSAL VISUAL COM MINIATURA REDONDA E PERFIL EMBAIXO -->
+    var primeiroDiaMes = new DateTime(Model.AnoCalendario, Model.MesCalendario, 1);
+    var diasNoMes = DateTime.DaysInMonth(Model.AnoCalendario, Model.MesCalendario);
+    var offsetInicioSemana = (int)primeiroDiaMes.DayOfWeek; // 0 = Dom .. 6 = Sáb
+    var mesAnterior = primeiroDiaMes.AddMonths(-1);
+    var proximoMes = primeiroDiaMes.AddMonths(1);
+    var nomeMesAno = cultura.TextInfo.ToTitleCase(primeiroDiaMes.ToString("MMMM 'de' yyyy", cultura));
+    var nomesSemanaCurto = new[] { "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb" };
+    <section class="dash-section">
+        <div class="cal-header">
+            <div>
+                <h2 class="dash-section-title">📅 Calendário do Mês — @nomeMesAno</h2>
+                <p class="dash-section-desc" style="margin-bottom:0;">
+                    Visão mensal com a miniatura redonda de cada publicação e o nome do <code>@@instagram</code> logo abaixo. Toque na miniatura para ir direto ao agendamento.
+                </p>
+            </div>
+
+            <div class="cal-nav">
+                <a href="/?ContaId=@Model.ContaId&Mes=@mesAnterior.Month&Ano=@mesAnterior.Year"
+                   class="btn btn-secondary">
+                    ◀ @cultura.TextInfo.ToTitleCase(mesAnterior.ToString("MMM", cultura))
+                </a>
+                <a href="/?ContaId=@Model.ContaId&Mes=@Model.AgoraSaoPaulo.Month&Ano=@Model.AgoraSaoPaulo.Year"
+                   class="btn btn-secondary">
+                    Hoje
+                </a>
+                <a href="/?ContaId=@Model.ContaId&Mes=@proximoMes.Month&Ano=@proximoMes.Year"
+                   class="btn btn-secondary">
+                    @cultura.TextInfo.ToTitleCase(proximoMes.ToString("MMM", cultura)) ▶
+                </a>
+            </div>
+        </div>
+
+        <div class="cal-weekdays">
+            @foreach (var nomeSem in nomesSemanaCurto)
+            {
+                <div class="cal-weekday">@nomeSem</div>
+            }
+        </div>
+
+        <div class="cal-grid">
+            @for (var i = 0; i < offsetInicioSemana; i++)
+            {
+                <div class="cal-day empty" aria-hidden="true"></div>
+            }
+
+            @for (var dia = 1; dia <= diasNoMes; dia++)
+            {
+                var dataAtual = new DateTime(Model.AnoCalendario, Model.MesCalendario, dia);
+                var ehHoje = dataAtual.Date == Model.AgoraSaoPaulo.Date;
+                Model.CalendarioPorDia.TryGetValue(dia, out var itensDia);
+                var qtdItens = itensDia?.Count ?? 0;
+
+                <div class="cal-day @(ehHoje ? "today" : "")">
+                    <div class="cal-day-num">
+                        <span>@dia.ToString("00") · @nomesSemanaCurto[(int)dataAtual.DayOfWeek]</span>
+                        @if (qtdItens > 0)
+                        {
+                            <small style="font-size:10px;color:var(--accent);">@qtdItens post(s)</small>
+                        }
+                    </div>
+
+                    @if (itensDia is { Count: > 0 })
+                    {
+                        <div class="cal-items">
+                            @foreach (var item in itensDia)
+                            {
+                                <a href="@item.AncoraAlvo"
+                                   class="cal-post-bubble"
+                                   title="@item.IdentificadorInstagram · @item.Titulo (@item.TipoMidia às @item.HorarioTexto)">
+                                    <span class="cal-thumb-ring @item.StatusClasse">
+                                        <img src="@item.UrlMiniatura"
+                                             alt="@item.Titulo"
+                                             loading="lazy" />
+                                        <span class="cal-bubble-time">@item.HorarioTexto</span>
+                                    </span>
+                                    <span class="cal-bubble-handle">@item.IdentificadorInstagram</span>
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </section>
 
@@ -717,7 +979,7 @@ else
                     var horariosTexto = Model.ObterHorariosStoryTexto(story);
                     var diasStory = InstagramAgendadorService.DeserializarDiasSemana(story.DiasSemanaJson);
                     var resumoDiasStory = InstagramAgendadorService.FormatarDiasSemanaResumo(story.DiasSemanaJson);
-                    <div class="queue-item">
+                    <div class="queue-item" id="story-card-@story.Id">
                         <div>
                             <img src="/media/story/@(story.Id).jpg?v=@(story.CriadoEmUtc.UtcTicks)"
                                   alt="@story.Titulo"
@@ -879,7 +1141,7 @@ else
                         ? post.UrlImagemExterna
                         : $"/media/post/{post.Id}.jpg?v={post.CriadoEmUtc.UtcTicks}";
 
-                    <div class="queue-item">
+                    <div class="queue-item" id="post-card-@post.Id">
                         <div>
                             <img src="@imgSrc"
                                  alt="@post.Titulo"

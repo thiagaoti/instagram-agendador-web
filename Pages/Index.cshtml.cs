@@ -9,6 +9,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InstagramAgendador.Web.Pages;
 
+public sealed record ItemCalendarioMes(
+    string UrlMiniatura,
+    string IdentificadorInstagram,
+    string Titulo,
+    string HorarioTexto,
+    string TipoMidia,
+    string StatusClasse,
+    string AncoraAlvo);
+
 public sealed class IndexModel : PageModel
 {
     private readonly IDbContextFactory<AgendadorDbContext> _dbFactory;
@@ -25,12 +34,23 @@ public sealed class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? ContaId { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public int? Mes { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? Ano { get; set; }
+
     public bool EhAdmin => User.IsInRole("Admin");
     public IReadOnlyList<InstagramContaCadastro> ContasDisponiveis { get; private set; } = [];
     public InstagramContaCadastro? ContaSelecionada { get; private set; }
     public IReadOnlyList<DateTime> ProximosSlotsConta { get; private set; } = [];
     public IReadOnlyList<InstagramPostAgendado> PostsAgendados { get; private set; } = [];
     public IReadOnlyList<InstagramStoryRecorrente> StoriesRecorrentes { get; private set; } = [];
+
+    public int MesCalendario { get; private set; }
+    public int AnoCalendario { get; private set; }
+    public IReadOnlyDictionary<int, List<ItemCalendarioMes>> CalendarioPorDia { get; private set; } =
+        new Dictionary<int, List<ItemCalendarioMes>>();
 
     public DateTime AgoraSaoPaulo => FusoHorarioService.AgoraLocal.DateTime;
     public int TotalPostsNaFila { get; private set; }
@@ -598,5 +618,179 @@ public sealed class IndexModel : PageModel
             + StoriesRecorrentes.Sum(s => s.TotalPublicacoes);
         TotalFalhas = PostsAgendados.Count(p => p.Status == StatusPostInstagram.Falha)
             + StoriesRecorrentes.Count(s => !string.IsNullOrWhiteSpace(s.UltimoErro));
+
+        // Monta o Calendário do Mês (exibe todas as contas acessíveis pelo usuário para visão completa)
+        var agora = AgoraSaoPaulo;
+        AnoCalendario = Ano is >= 2024 and <= 2035 ? Ano.Value : agora.Year;
+        MesCalendario = Mes is >= 1 and <= 12 ? Mes.Value : agora.Month;
+
+        var idsPermitidos = ContasDisponiveis.Select(c => c.Id).ToHashSet();
+        var postsCalendario = EhAdmin && ContasDisponiveis.Count > 1
+            ? await db.PostsAgendados
+                .AsNoTracking()
+                .Where(p => idsPermitidos.Contains(p.InstagramContaId) && p.Status != StatusPostInstagram.Cancelado)
+                .OrderByDescending(p => p.Id)
+                .Take(250)
+                .Select(p => new InstagramPostAgendado
+                {
+                    Id = p.Id,
+                    InstagramContaId = p.InstagramContaId,
+                    IdentificadorInstagram = p.IdentificadorInstagram,
+                    Titulo = p.Titulo,
+                    TipoPublicacao = p.TipoPublicacao,
+                    UrlImagemExterna = p.UrlImagemExterna,
+                    HorarioProgramadoLocal = p.HorarioProgramadoLocal,
+                    RecorrenteSemanal = p.RecorrenteSemanal,
+                    DiasSemanaJson = p.DiasSemanaJson,
+                    HorarioFixoSemanal = p.HorarioFixoSemanal,
+                    Status = p.Status,
+                    CriadoEmUtc = p.CriadoEmUtc
+                })
+                .ToListAsync(cancellationToken)
+            : PostsAgendados.Where(p => p.Status != StatusPostInstagram.Cancelado).ToList();
+
+        var storiesCalendario = EhAdmin && ContasDisponiveis.Count > 1
+            ? await db.StoriesRecorrentes
+                .AsNoTracking()
+                .Where(s => idsPermitidos.Contains(s.InstagramContaId) && s.Ativo)
+                .Select(s => new InstagramStoryRecorrente
+                {
+                    Id = s.Id,
+                    InstagramContaId = s.InstagramContaId,
+                    IdentificadorInstagram = s.IdentificadorInstagram,
+                    Titulo = s.Titulo,
+                    ModoAgendamento = s.ModoAgendamento,
+                    HorariosDiariosJson = s.HorariosDiariosJson,
+                    DiasSemanaJson = s.DiasSemanaJson,
+                    ProximoDisparoLocal = s.ProximoDisparoLocal,
+                    Ativo = s.Ativo,
+                    Status = s.Status,
+                    CriadoEmUtc = s.CriadoEmUtc
+                })
+                .ToListAsync(cancellationToken)
+            : StoriesRecorrentes.Where(s => s.Ativo).ToList();
+
+        var mapaDias = new Dictionary<int, List<ItemCalendarioMes>>();
+        var totalDiasNoMes = DateTime.DaysInMonth(AnoCalendario, MesCalendario);
+
+        void AdicionarNoDia(int dia, ItemCalendarioMes item)
+        {
+            if (dia < 1 || dia > totalDiasNoMes) return;
+            if (!mapaDias.TryGetValue(dia, out var lista))
+            {
+                lista = [];
+                mapaDias[dia] = lista;
+            }
+            lista.Add(item);
+        }
+
+        foreach (var p in postsCalendario)
+        {
+            var imgUrl = !string.IsNullOrWhiteSpace(p.UrlImagemExterna)
+                ? p.UrlImagemExterna
+                : $"/media/post/{p.Id}.jpg?v={p.CriadoEmUtc.UtcTicks}";
+
+            var statusCls = p.Status switch
+            {
+                StatusPostInstagram.Publicado => "publicado",
+                StatusPostInstagram.Falha => "falha",
+                _ => "agendado"
+            };
+
+            if (p.HorarioProgramadoLocal.Year == AnoCalendario &&
+                p.HorarioProgramadoLocal.Month == MesCalendario)
+            {
+                AdicionarNoDia(
+                    p.HorarioProgramadoLocal.Day,
+                    new ItemCalendarioMes(
+                        UrlMiniatura: imgUrl,
+                        IdentificadorInstagram: p.IdentificadorInstagram,
+                        Titulo: p.Titulo,
+                        HorarioTexto: p.HorarioProgramadoLocal.ToString("HH:mm"),
+                        TipoMidia: p.TipoPublicacao,
+                        StatusClasse: statusCls,
+                        AncoraAlvo: $"#post-card-{p.Id}"));
+            }
+
+            // Se for recorrente semanal ativo, projeta nos demais dias da semana escolhidos neste mês
+            if (p.RecorrenteSemanal && p.Status == StatusPostInstagram.Agendado)
+            {
+                var diasSem = InstagramAgendadorService.DeserializarDiasSemana(p.DiasSemanaJson);
+                var horaFixa = p.HorarioFixoSemanal ?? p.HorarioProgramadoLocal.ToString("HH:mm");
+                for (var d = 1; d <= totalDiasNoMes; d++)
+                {
+                    var dataDia = new DateTime(AnoCalendario, MesCalendario, d);
+                    if (dataDia.Date < agora.Date) continue;
+                    if (dataDia.Date == p.HorarioProgramadoLocal.Date) continue;
+                    if (diasSem.Contains((int)dataDia.DayOfWeek))
+                    {
+                        AdicionarNoDia(
+                            d,
+                            new ItemCalendarioMes(
+                                UrlMiniatura: imgUrl,
+                                IdentificadorInstagram: p.IdentificadorInstagram,
+                                Titulo: $"{p.Titulo} (Semanal)",
+                                HorarioTexto: horaFixa,
+                                TipoMidia: p.TipoPublicacao,
+                                StatusClasse: "agendado",
+                                AncoraAlvo: $"#post-card-{p.Id}"));
+                    }
+                }
+            }
+        }
+
+        foreach (var s in storiesCalendario)
+        {
+            var imgStoryUrl = $"/media/story/{s.Id}.jpg?v={s.CriadoEmUtc.UtcTicks}";
+            if (s.ModoAgendamento == ModoStoryRecorrente.UnicaVez)
+            {
+                if (s.ProximoDisparoLocal.Year == AnoCalendario &&
+                    s.ProximoDisparoLocal.Month == MesCalendario)
+                {
+                    AdicionarNoDia(
+                        s.ProximoDisparoLocal.Day,
+                        new ItemCalendarioMes(
+                            UrlMiniatura: imgStoryUrl,
+                            IdentificadorInstagram: s.IdentificadorInstagram,
+                            Titulo: s.Titulo,
+                            HorarioTexto: s.ProximoDisparoLocal.ToString("HH:mm"),
+                            TipoMidia: "Story",
+                            StatusClasse: "agendado",
+                            AncoraAlvo: $"#story-card-{s.Id}"));
+                }
+            }
+            else
+            {
+                var diasSemStory = InstagramAgendadorService.DeserializarDiasSemana(s.DiasSemanaJson);
+                var horariosStory = InstagramAgendadorService.DeserializarHorarios(s.HorariosDiariosJson, ["10:00"]);
+                var primeiroHorario = horariosStory.FirstOrDefault() ?? "10:00";
+
+                for (var d = 1; d <= totalDiasNoMes; d++)
+                {
+                    var dataDia = new DateTime(AnoCalendario, MesCalendario, d);
+                    if (dataDia.Date < agora.Date) continue;
+                    if (diasSemStory.Contains((int)dataDia.DayOfWeek))
+                    {
+                        AdicionarNoDia(
+                            d,
+                            new ItemCalendarioMes(
+                                UrlMiniatura: imgStoryUrl,
+                                IdentificadorInstagram: s.IdentificadorInstagram,
+                                Titulo: s.Titulo,
+                                HorarioTexto: primeiroHorario,
+                                TipoMidia: "Story",
+                                StatusClasse: "agendado",
+                                AncoraAlvo: $"#story-card-{s.Id}"));
+                    }
+                }
+            }
+        }
+
+        foreach (var kv in mapaDias)
+        {
+            kv.Value.Sort((a, b) => string.CompareOrdinal(a.HorarioTexto, b.HorarioTexto));
+        }
+
+        CalendarioPorDia = mapaDias;
     }
 }
