@@ -221,6 +221,79 @@
     </div>
 }
 
+<!-- 0. CONEXÃO EM 1 CLIQUE (ESTILO MLABS) — CONFIGURAR APP META E LINKS PARA CLIENTES -->
+<section class="cfg-section" style="background:linear-gradient(160deg,#151c33 0%,#141122 100%);border-color:#2e4a80;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <span class="cfg-pill ok" style="background:#172554;border-color:#3b82f6;color:#93c5fd;">
+            ⚡ MODO MAIS FÁCIL · CONEXÃO EM 1 CLIQUE PELO FACEBOOK (IGUAL MLABS)
+        </span>
+        @if (!string.IsNullOrWhiteSpace(Model.MetaAppIdSalvo) && Model.MetaAppSecretSalvo)
+        {
+            <span class="cfg-pill ok">✅ App Meta Configurado e Ativo</span>
+        }
+        else
+        {
+            <span class="cfg-pill warn">Preencha o App ID e App Secret abaixo 1 única vez</span>
+        }
+    </div>
+
+    <h2 class="cfg-section-title">Conexão Automática em 1 Clique (Sem Precisar Pegar Token ou ID)</h2>
+    <p class="cfg-section-sub">
+        Salve o <strong>ID do Aplicativo</strong> e a <strong>Chave Secreta</strong> do seu App da Meta uma única vez abaixo. Depois disso, basta clicar em <strong>"🔵 Conectar Instagram pelo Facebook"</strong> (ou enviar o link de 1 clique para o seu cliente na seção de usuários lá embaixo) que o sistema pega o Token de 60 dias, o <code>@@arroba</code> e o <code>Account ID</code> sozinho!
+    </p>
+
+    <div style="margin-bottom:14px;padding:12px 14px;background:#0e1424;border:1px solid #2b3f6c;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="min-width:0;">
+            <div style="font-size:11px;font-weight:800;color:#93c5fd;text-transform:uppercase;">
+                URL de Redirecionamento OAuth para colar no seu App da Meta (Login do Facebook ➔ Configurações):
+            </div>
+            <code id="urlRedirectOAuthText" style="display:block;margin-top:4px;font-size:12.5px;color:#fff;word-break:break-all;">@Model.RedirectUriOAuth</code>
+        </div>
+        <button type="button"
+                class="cfg-btn cfg-btn-secondary"
+                onclick="navigator.clipboard.writeText(document.getElementById('urlRedirectOAuthText').textContent); this.textContent='✅ URL Copiada!';">
+            📋 Copiar URL
+        </button>
+    </div>
+
+    <form method="post" asp-page-handler="SalvarCredenciaisMeta">
+        @Html.AntiForgeryToken()
+        <div class="cfg-grid" style="align-items:end;">
+            <div class="cfg-field">
+                <label for="cfgMetaAppId">Meta App ID (ID do Aplicativo)</label>
+                <input id="cfgMetaAppId"
+                       name="metaAppId"
+                       type="text"
+                       value="@Model.MetaAppIdSalvo"
+                       placeholder="Ex.: 123456789012345"
+                       required />
+            </div>
+
+            <div class="cfg-field">
+                <label for="cfgMetaAppSecret">Meta App Secret (Chave Secreta do Aplicativo)</label>
+                <input id="cfgMetaAppSecret"
+                       name="metaAppSecret"
+                       type="password"
+                       placeholder="@(Model.MetaAppSecretSalvo ? "•••••••••••• (Já salva no banco — digite p/ trocar)" : "Cole a Chave Secreta do App Meta")" />
+            </div>
+
+            <div class="cfg-field">
+                <button type="submit" class="cfg-btn cfg-btn-primary">
+                    💾 Salvar App Meta
+                </button>
+            </div>
+
+            <div class="cfg-field">
+                <a href="/ConectarInstagram"
+                   class="cfg-btn"
+                   style="background:#1877f2;color:#fff;font-weight:850;">
+                    🔵 Conectar Instagram pelo Facebook (1 Clique)
+                </a>
+            </div>
+        </div>
+    </form>
+</section>
+
 <!-- 1. INCLUIR PERFIL DO INSTAGRAM PARA CADA USUÁRIO COM SUA RESPECTIVA CONFIGURAÇÃO -->
 <section class="cfg-section">
     <h2 class="cfg-section-title">1. Incluir Perfil do Instagram para um Usuário + Configuração da Conta</h2>
@@ -690,17 +763,29 @@
                     </div>
                 </form>
 
-                @if (Model.UsuariosAcesso.Count > 1)
-                {
-                    <form method="post"
-                          asp-page-handler="ExcluirUsuario"
-                          style="margin-top:8px;"
-                          onsubmit="return confirm('Deseja remover este usuário?');">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="usuarioId" value="@usr.Id" />
-                        <button type="submit" class="cfg-btn cfg-btn-danger">Excluir Usuário</button>
-                    </form>
-                }
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+                    @{
+                        var linkConvite = Model.GerarLinkConviteCliente(usr.Id);
+                    }
+                    <button type="button"
+                            class="cfg-btn"
+                            style="background:#1877f2;color:#fff;"
+                            onclick="navigator.clipboard.writeText('@linkConvite'); this.textContent='✅ Link Copiado! Mande no WhatsApp do Cliente';">
+                        📲 Copiar Link 1-Clique p/ @usr.NomeExibicao Conectar o Instagram
+                    </button>
+
+                    @if (Model.UsuariosAcesso.Count > 1)
+                    {
+                        <form method="post"
+                              asp-page-handler="ExcluirUsuario"
+                              style="margin:0;"
+                              onsubmit="return confirm('Deseja remover este usuário?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="usuarioId" value="@usr.Id" />
+                            <button type="submit" class="cfg-btn cfg-btn-danger">Excluir Usuário</button>
+                        </form>
+                    }
+                </div>
             </div>
         }
     </div>

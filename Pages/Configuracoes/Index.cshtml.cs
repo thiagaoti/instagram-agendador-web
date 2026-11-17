@@ -24,6 +24,9 @@ public sealed class IndexModel : PageModel
     public IReadOnlyList<InstagramContaCadastro> ContasInstagram { get; private set; } = [];
     public IReadOnlyList<UsuarioAcesso> UsuariosAcesso { get; private set; } = [];
     public string BaseUrlDetectada { get; private set; } = string.Empty;
+    public string MetaAppIdSalvo { get; private set; } = string.Empty;
+    public bool MetaAppSecretSalvo { get; private set; }
+    public string RedirectUriOAuth => $"{BaseUrlDetectada}/ConectarInstagram?handler=CallbackMeta";
 
     private bool EhAdmin => User.IsInRole("Admin");
 
@@ -38,9 +41,43 @@ public sealed class IndexModel : PageModel
         }
 
         BaseUrlDetectada = ObterBaseUrlPublica();
+        var (appId, appSecret) = await _agendadorService.ObterCredenciaisAppMetaAsync(cancellationToken);
+        MetaAppIdSalvo = appId;
+        MetaAppSecretSalvo = !string.IsNullOrWhiteSpace(appSecret);
+
         ContasInstagram = await _agendadorService.ListarContasAsync(cancellationToken);
         UsuariosAcesso = await _agendadorService.ListarUsuariosAsync(cancellationToken);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostSalvarCredenciaisMetaAsync(
+        [FromForm] string? metaAppId,
+        [FromForm] string? metaAppSecret,
+        CancellationToken cancellationToken)
+    {
+        if (!EhAdmin)
+        {
+            return Forbid();
+        }
+
+        try
+        {
+            await _agendadorService.SalvarCredenciaisAppMetaAsync(metaAppId, metaAppSecret, cancellationToken);
+            TempData["Mensagem"] = "Credenciais do Aplicativo Meta (App ID / App Secret) salvas com sucesso! O botão de conexão em 1 clique já está ativo.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            TempData["TipoMensagem"] = "erro";
+            TempData["Mensagem"] = ex.GetBaseException().Message;
+        }
+
+        return RedirectToPage();
+    }
+
+    public string GerarLinkConviteCliente(int usuarioId)
+    {
+        var sig = InstagramAgendadorService.GerarAssinaturaConvite(usuarioId);
+        return $"{ObterBaseUrlPublica()}/ConectarInstagram?uid={usuarioId}&sig={sig}";
     }
 
     public async Task<IActionResult> OnPostSalvarContaInstagramAsync(

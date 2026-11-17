@@ -13,6 +13,7 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
     }
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+    public DbSet<ConfiguracaoMetaOAuth> ConfiguracoesMeta => Set<ConfiguracaoMetaOAuth>();
     public DbSet<InstagramContaCadastro> ContasInstagram => Set<InstagramContaCadastro>();
     public DbSet<UsuarioAcesso> UsuariosAcesso => Set<UsuarioAcesso>();
     public DbSet<InstagramPostAgendado> PostsAgendados => Set<InstagramPostAgendado>();
@@ -35,6 +36,18 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
         base.OnModelCreating(modelBuilder);
 
         var ehSqlite = Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
+
+        modelBuilder.Entity<ConfiguracaoMetaOAuth>(entity =>
+        {
+            entity.ToTable("IgSistema_ConfiguracaoMeta");
+            entity.HasKey(e => e.Id);
+
+            if (!ehSqlite)
+            {
+                entity.Property(e => e.AtualizadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+            }
+        });
 
         modelBuilder.Entity<InstagramContaCadastro>(entity =>
         {
