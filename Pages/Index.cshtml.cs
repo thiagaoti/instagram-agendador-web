@@ -18,6 +18,8 @@ public sealed record ItemCalendarioMes(
     string StatusClasse,
     string AncoraAlvo);
 
+[RequestSizeLimit(120_000_000)]
+[RequestFormLimits(MultipartBodyLengthLimit = 120_000_000)]
 public sealed class IndexModel : PageModel
 {
     private readonly IDbContextFactory<AgendadorDbContext> _dbFactory;
@@ -74,6 +76,7 @@ public sealed class IndexModel : PageModel
         [FromForm] string? horarioDiaSemanaPost,
         [FromForm] string? urlImagemExterna,
         [FromForm] IFormFile? arquivoImagem,
+        [FromForm] List<IFormFile>? arquivosMidia,
         [FromForm] bool publicarImediatamente,
         CancellationToken cancellationToken)
     {
@@ -81,13 +84,40 @@ public sealed class IndexModel : PageModel
         {
             byte[]? bytesImagem = null;
             string? contentType = null;
+            List<(byte[] Bytes, string ContentType)>? listaCarrossel = null;
 
-            if (arquivoImagem is { Length: > 0 })
+            var arquivosEnviados = new List<IFormFile>();
+            if (arquivosMidia is { Count: > 0 })
+            {
+                arquivosEnviados.AddRange(arquivosMidia.Where(a => a.Length > 0));
+            }
+            if (arquivosEnviados.Count == 0 && arquivoImagem is { Length: > 0 })
+            {
+                arquivosEnviados.Add(arquivoImagem);
+            }
+
+            if (arquivosEnviados.Count == 1)
             {
                 await using var ms = new MemoryStream();
-                await arquivoImagem.CopyToAsync(ms, cancellationToken);
+                await arquivosEnviados[0].CopyToAsync(ms, cancellationToken);
                 bytesImagem = ms.ToArray();
-                contentType = arquivoImagem.ContentType;
+                contentType = arquivosEnviados[0].ContentType;
+            }
+            else if (arquivosEnviados.Count >= 2)
+            {
+                listaCarrossel = new List<(byte[] Bytes, string ContentType)>(arquivosEnviados.Count);
+                foreach (var arq in arquivosEnviados)
+                {
+                    await using var ms = new MemoryStream();
+                    await arq.CopyToAsync(ms, cancellationToken);
+                    listaCarrossel.Add((ms.ToArray(), arq.ContentType));
+                }
+            }
+
+            if (string.Equals(tipoPublicacao, TipoMidiaInstagram.FeedCarrossel, StringComparison.OrdinalIgnoreCase) &&
+                (listaCarrossel is null || listaCarrossel.Count < 2))
+            {
+                throw new ArgumentException("Para publicar um Carrossel no Feed, selecione de 2 a 10 arquivos (fotos e/ou vídeos) de uma vez.");
             }
 
             if (string.Equals(modoHorario, "dias_semana", StringComparison.OrdinalIgnoreCase))
@@ -110,6 +140,7 @@ public sealed class IndexModel : PageModel
                     recorrenteSemanal: true,
                     diasSemana: diasSemanaPost,
                     horarioFixoSemanal: horarioDiaSemanaPost,
+                    arquivosCarrossel: listaCarrossel,
                     cancellationToken: cancellationToken);
 
                 var diasTexto = InstagramAgendadorService.FormatarDiasSemanaResumo(postSemanal.DiasSemanaJson);
@@ -145,6 +176,7 @@ public sealed class IndexModel : PageModel
                 urlImagemExterna,
                 horarioEscolhido,
                 ObterBaseUrlPublica(),
+                arquivosCarrossel: listaCarrossel,
                 cancellationToken: cancellationToken);
 
             if (publicarImediatamente)
@@ -556,6 +588,7 @@ public sealed class IndexModel : PageModel
                 Legenda = p.Legenda,
                 TipoPublicacao = p.TipoPublicacao,
                 ContentTypeImagem = p.ContentTypeImagem,
+                UrlsCarrosselJson = p.UrlsCarrosselJson,
                 UrlImagemExterna = p.UrlImagemExterna,
                 BaseUrlPublica = p.BaseUrlPublica,
                 HorarioProgramadoLocal = p.HorarioProgramadoLocal,

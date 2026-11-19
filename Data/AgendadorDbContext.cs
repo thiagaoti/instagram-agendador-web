@@ -18,6 +18,7 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
     public DbSet<UsuarioAcesso> UsuariosAcesso => Set<UsuarioAcesso>();
     public DbSet<InstagramPostAgendado> PostsAgendados => Set<InstagramPostAgendado>();
     public DbSet<InstagramStoryRecorrente> StoriesRecorrentes => Set<InstagramStoryRecorrente>();
+    public DbSet<InstagramMidiaItem> MidiasPost => Set<InstagramMidiaItem>();
 
     private static readonly ValueConverter<DateTime, DateTime> DataHoraLocalConverter = new(
         valor => DateTime.SpecifyKind(valor, DateTimeKind.Unspecified),
@@ -117,6 +118,19 @@ public class AgendadorDbContext : DbContext, IDataProtectionKeyContext
                     .HasColumnType("timestamp with time zone");
                 entity.Property(e => e.UltimaPublicacaoEmUtc)
                     .HasColumnType("timestamp with time zone");
+                entity.Property(e => e.CriadoEmUtc)
+                    .HasColumnType("timestamp with time zone");
+            }
+        });
+
+        modelBuilder.Entity<InstagramMidiaItem>(entity =>
+        {
+            entity.ToTable("IgSistema_MidiasPost");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.PostAgendadoId, e.Ordem });
+
+            if (!ehSqlite)
+            {
                 entity.Property(e => e.CriadoEmUtc)
                     .HasColumnType("timestamp with time zone");
             }

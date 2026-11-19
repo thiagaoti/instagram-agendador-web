@@ -722,11 +722,11 @@ else
         </div>
     </section>
 
-    <!-- 1. AGENDAR NOVO POST (FEED, STORIES OU FEED + STORIES) -->
+    <!-- 1. AGENDAR NOVO POST (FEED, CARROSSEL, VÍDEO/REELS OU STORIES) -->
     <section class="dash-section">
-        <h2 class="dash-section-title">1. Agendar Nova Publicação (Feed, Stories ou Ambos)</h2>
+        <h2 class="dash-section-title">1. Agendar Nova Publicação (Foto, Vídeo/Reels ou Carrossel)</h2>
         <p class="dash-section-desc">
-            Envie uma foto pronta do seu celular/computador (ou cole o link da imagem), escolha para qual Instagram vai a publicação, escreva a legenda e agende.
+            Envie <strong>1 foto</strong>, <strong>1 vídeo (MP4/MOV)</strong> ou selecione <strong>de 2 a 10 fotos/vídeos juntos para montar um Carrossel no Feed</strong>, escolha o Instagram, escreva a legenda e agende.
         </p>
 
         <form method="post"
@@ -738,9 +738,10 @@ else
                 <div class="preview-col">
                     <div style="width:155px;height:155px;background:var(--panel-alt);border:1px dashed #473869;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;color:var(--muted);font-size:11px;">
                         <img id="postPreviewImg" alt="Prévia do Post" style="display:none;width:100%;height:100%;object-fit:cover;" />
-                        <span id="postPreviewText">Prévia da Imagem do Post</span>
+                        <video id="postPreviewVideo" controls muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+                        <span id="postPreviewText">Prévia de Foto, Vídeo ou Carrossel</span>
                     </div>
-                    <small style="color:var(--muted);font-size:10px;text-align:center;">JPG, PNG ou WebP (máx. 8 MB)</small>
+                    <small id="postPreviewCaption" style="color:var(--muted);font-size:10px;text-align:center;">Foto (JPG/PNG) ou Vídeo (MP4/MOV até 55 MB)</small>
                 </div>
 
                 <div style="min-width:0;max-width:100%;">
@@ -762,29 +763,32 @@ else
                             <input id="postTitulo"
                                    name="titulo"
                                    type="text"
-                                   placeholder="Ex.: Post Oferta do Dia / Comunicado"
+                                   placeholder="Ex.: Post Oferta do Dia / Vídeo / Carrossel"
                                    required />
                         </div>
 
                         <div class="field">
-                            <label for="postTipo">Onde publicar?</label>
+                            <label for="postTipo">Onde e formato da publicação?</label>
                             <select id="postTipo" name="tipoPublicacao">
-                                <option value="@TipoMidiaInstagram.Feed">Somente no Feed</option>
-                                <option value="@TipoMidiaInstagram.FeedEStories">No Feed + Nos Stories</option>
-                                <option value="@TipoMidiaInstagram.Stories">Somente nos Stories</option>
+                                <option value="@TipoMidiaInstagram.Feed">Somente no Feed (Foto ou Vídeo/Reels)</option>
+                                <option value="@TipoMidiaInstagram.FeedCarrossel">Carrossel no Feed (2 a 10 Fotos e/ou Vídeos)</option>
+                                <option value="@TipoMidiaInstagram.FeedEStories">No Feed + Nos Stories (Foto ou Vídeo)</option>
+                                <option value="@TipoMidiaInstagram.Stories">Somente nos Stories (Foto ou Vídeo)</option>
                             </select>
                         </div>
 
                         <div class="field">
-                            <label for="postArquivo">Subir imagem do celular ou PC</label>
+                            <label for="postArquivo">Subir Foto(s) ou Vídeo(s) do celular/PC</label>
                             <input id="postArquivo"
-                                   name="arquivoImagem"
+                                   name="arquivosMidia"
                                    type="file"
-                                   accept="image/jpeg,image/png,image/webp" />
+                                   multiple
+                                   accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" />
+                            <small>Para Carrossel, selecione de 2 a 10 arquivos de uma só vez.</small>
                         </div>
 
                         <div class="field">
-                            <label for="postUrlExterna">Ou URL pública da imagem (opcional)</label>
+                            <label for="postUrlExterna">Ou URL pública da foto/vídeo (opcional)</label>
                             <input id="postUrlExterna"
                                    name="urlImagemExterna"
                                    type="url"
@@ -867,11 +871,11 @@ else
         </form>
     </section>
 
-    <!-- 2. CRIAR E PROGRAMAR STORY AUTOMÁTICO RECORRENTE (ARTE PRONTA 9:16) -->
+    <!-- 2. CRIAR E PROGRAMAR STORY AUTOMÁTICO RECORRENTE (FOTO OU VÍDEO 9:16) -->
     <section class="dash-section">
-        <h2 class="dash-section-title">2. Programar Story Automático (Arte Pronta 9:16 do Celular/PC)</h2>
+        <h2 class="dash-section-title">2. Programar Story Automático (Foto ou Vídeo 9:16 do Celular/PC)</h2>
         <p class="dash-section-desc">
-            Suba sua arte vertical pronta (1080x1920) e programe para o sistema postar automaticamente todo dia nos horários escolhidos ou em uma data única.
+            Suba sua arte vertical pronta (Foto JPG/PNG ou Vídeo MP4/MOV) e programe para o sistema postar automaticamente todo dia nos horários escolhidos ou em uma data única.
         </p>
 
         <form method="post"
@@ -884,7 +888,8 @@ else
                 <div class="preview-col">
                     <div style="width:136px;height:240px;background:#0d0b14;border:1px dashed #473869;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;color:var(--muted);font-size:11px;">
                         <img id="storyPreviewImg" alt="Prévia Story" style="display:none;width:100%;height:100%;object-fit:cover;" />
-                        <span id="storyPreviewText">Prévia Vertical 9:16 do Story</span>
+                        <video id="storyPreviewVideo" controls muted playsinline style="display:none;width:100%;height:100%;object-fit:cover;"></video>
+                        <span id="storyPreviewText">Prévia Vertical 9:16 (Foto ou Vídeo)</span>
                     </div>
                 </div>
 
@@ -911,12 +916,13 @@ else
                     </div>
 
                     <div class="field">
-                        <label for="storyImagemInput">Arte vertical do celular ou PC</label>
+                        <label for="storyImagemInput">Foto ou Vídeo vertical do celular ou PC</label>
                         <input id="storyImagemInput"
                                name="imagemStory"
                                type="file"
-                               accept="image/jpeg,image/png,image/webp"
+                               accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
                                required />
+                        <small>Foto (JPG/PNG) ou Vídeo (MP4/MOV até 55 MB).</small>
                     </div>
 
                     <div class="field">
@@ -981,10 +987,21 @@ else
                     var resumoDiasStory = InstagramAgendadorService.FormatarDiasSemanaResumo(story.DiasSemanaJson);
                     <div class="queue-item" id="story-card-@story.Id">
                         <div>
-                            <img src="/media/story/@(story.Id).jpg?v=@(story.CriadoEmUtc.UtcTicks)"
-                                  alt="@story.Titulo"
-                                  style="width:96px;height:170px;object-fit:cover;border-radius:9px;border:1px solid var(--border);"
-                                  loading="lazy" />
+                            @if (story.EhVideo)
+                            {
+                                <video src="/media/story/@(story.Id).mp4?v=@(story.CriadoEmUtc.UtcTicks)"
+                                       controls
+                                       muted
+                                       playsinline
+                                       style="width:96px;height:170px;object-fit:cover;border-radius:9px;border:1px solid var(--border);background:#0d0b14;"></video>
+                            }
+                            else
+                            {
+                                <img src="/media/story/@(story.Id).jpg?v=@(story.CriadoEmUtc.UtcTicks)"
+                                     alt="@story.Titulo"
+                                     style="width:96px;height:170px;object-fit:cover;border-radius:9px;border:1px solid var(--border);"
+                                     loading="lazy" />
+                            }
                         </div>
 
                         <div>
@@ -1055,8 +1072,8 @@ else
                                                value="@((story.DataHoraUnicaLocal ?? story.ProximoDisparoLocal).ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture))" />
                                     </div>
                                     <div class="field">
-                                        <label>Trocar arte (opcional)</label>
-                                        <input type="file" name="novaImagemStory" accept="image/jpeg,image/png,image/webp" />
+                                        <label>Trocar foto/vídeo (opcional)</label>
+                                        <input type="file" name="novaImagemStory" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" />
                                     </div>
                                     <div class="field" style="grid-column:1 / -1;">
                                         <label>Dias da Semana deste Story</label>
@@ -1137,16 +1154,28 @@ else
                         _ => "agendado"
                     };
 
+                    var extMidiaPost = post.EhVideo ? "mp4" : "jpg";
                     var imgSrc = !string.IsNullOrWhiteSpace(post.UrlImagemExterna)
                         ? post.UrlImagemExterna
-                        : $"/media/post/{post.Id}.jpg?v={post.CriadoEmUtc.UtcTicks}";
+                        : $"/media/post/{post.Id}.{extMidiaPost}?v={post.CriadoEmUtc.UtcTicks}";
 
                     <div class="queue-item" id="post-card-@post.Id">
                         <div>
-                            <img src="@imgSrc"
-                                 alt="@post.Titulo"
-                                 style="width:98px;height:98px;object-fit:cover;border-radius:9px;border:1px solid var(--border);background:#0d0b14;"
-                                 loading="lazy" />
+                            @if (post.EhVideo)
+                            {
+                                <video src="@imgSrc"
+                                       controls
+                                       muted
+                                       playsinline
+                                       style="width:98px;height:98px;object-fit:cover;border-radius:9px;border:1px solid var(--border);background:#0d0b14;"></video>
+                            }
+                            else
+                            {
+                                <img src="@imgSrc"
+                                     alt="@post.Titulo"
+                                     style="width:98px;height:98px;object-fit:cover;border-radius:9px;border:1px solid var(--border);background:#0d0b14;"
+                                     loading="lazy" />
+                            }
                         </div>
 
                         <div>
@@ -1154,7 +1183,9 @@ else
                                 <div>
                                     <strong style="font-size:14px;color:#fff;">#@post.Id — @post.Titulo</strong>
                                     <span class="pill agendado" style="margin-left:8px;">@post.IdentificadorInstagram</span>
-                                    <span class="pill cancelado" style="margin-left:4px;">@post.TipoPublicacao</span>
+                                    <span class="pill cancelado" style="margin-left:4px;">
+                                        @(post.EhCarrossel ? "📸 Carrossel no Feed" : post.EhVideo ? $"🎬 Vídeo ({post.TipoPublicacao})" : post.TipoPublicacao)
+                                    </span>
                                     @if (post.RecorrenteSemanal)
                                     {
                                         <span class="pill publicado" style="margin-left:4px;">
@@ -1216,14 +1247,15 @@ else
                                             <label>Onde publicar</label>
                                             <select name="tipoPublicacao">
                                                 <option value="@TipoMidiaInstagram.Feed" selected="@(post.TipoPublicacao == TipoMidiaInstagram.Feed ? "selected" : null)">Feed</option>
+                                                <option value="@TipoMidiaInstagram.FeedCarrossel" selected="@(post.TipoPublicacao == TipoMidiaInstagram.FeedCarrossel ? "selected" : null)">Carrossel no Feed</option>
                                                 <option value="@TipoMidiaInstagram.FeedEStories" selected="@(post.TipoPublicacao == TipoMidiaInstagram.FeedEStories ? "selected" : null)">Feed + Stories</option>
                                                 <option value="@TipoMidiaInstagram.Stories" selected="@(post.TipoPublicacao == TipoMidiaInstagram.Stories ? "selected" : null)">Somente Stories</option>
                                             </select>
                                         </div>
 
                                         <div class="field">
-                                            <label>Trocar imagem (opcional)</label>
-                                            <input type="file" name="novaImagem" accept="image/jpeg,image/png,image/webp" />
+                                            <label>Trocar foto/vídeo (opcional)</label>
+                                            <input type="file" name="novaImagem" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" />
                                         </div>
                                     </div>
 
@@ -1299,43 +1331,78 @@ else
 
         const postArquivo = document.getElementById("postArquivo");
         const postPreviewImg = document.getElementById("postPreviewImg");
+        const postPreviewVideo = document.getElementById("postPreviewVideo");
         const postPreviewText = document.getElementById("postPreviewText");
+        const postPreviewCaption = document.getElementById("postPreviewCaption");
+        const postTipo = document.getElementById("postTipo");
+
         if (postArquivo && postPreviewImg && postPreviewText) {
             postArquivo.addEventListener("change", () => {
-                const f = postArquivo.files && postArquivo.files[0];
-                if (!f) {
+                const files = postArquivo.files ? Array.from(postArquivo.files) : [];
+                if (files.length === 0) {
                     postPreviewImg.style.display = "none";
+                    if (postPreviewVideo) postPreviewVideo.style.display = "none";
                     postPreviewText.style.display = "inline";
+                    if (postPreviewCaption) postPreviewCaption.textContent = "Foto (JPG/PNG) ou Vídeo (MP4/MOV até 55 MB)";
                     return;
                 }
-                const r = new FileReader();
-                r.onload = e => {
-                    postPreviewImg.src = e.target.result;
+
+                if (files.length >= 2 && postTipo) {
+                    postTipo.value = "@TipoMidiaInstagram.FeedCarrossel";
+                }
+
+                const f = files[0];
+                const ehVid = f.type && f.type.startsWith("video/");
+                const urlObj = URL.createObjectURL(f);
+
+                if (ehVid && postPreviewVideo) {
+                    postPreviewImg.style.display = "none";
+                    postPreviewVideo.src = urlObj;
+                    postPreviewVideo.style.display = "block";
+                    postPreviewText.style.display = "none";
+                } else {
+                    if (postPreviewVideo) postPreviewVideo.style.display = "none";
+                    postPreviewImg.src = urlObj;
                     postPreviewImg.style.display = "block";
                     postPreviewText.style.display = "none";
-                };
-                r.readAsDataURL(f);
+                }
+
+                if (postPreviewCaption) {
+                    postPreviewCaption.textContent = files.length >= 2
+                        ? `📸 Carrossel: ${files.length} arquivos selecionados`
+                        : ehVid
+                            ? "🎬 1 Vídeo selecionado"
+                            : "🖼 1 Foto selecionada";
+                }
             });
         }
 
         const storyImagemInput = document.getElementById("storyImagemInput");
         const storyPreviewImg = document.getElementById("storyPreviewImg");
+        const storyPreviewVideo = document.getElementById("storyPreviewVideo");
         const storyPreviewText = document.getElementById("storyPreviewText");
         if (storyImagemInput && storyPreviewImg && storyPreviewText) {
             storyImagemInput.addEventListener("change", () => {
                 const f = storyImagemInput.files && storyImagemInput.files[0];
                 if (!f) {
                     storyPreviewImg.style.display = "none";
+                    if (storyPreviewVideo) storyPreviewVideo.style.display = "none";
                     storyPreviewText.style.display = "inline";
                     return;
                 }
-                const r = new FileReader();
-                r.onload = e => {
-                    storyPreviewImg.src = e.target.result;
+                const ehVid = f.type && f.type.startsWith("video/");
+                const urlObj = URL.createObjectURL(f);
+                if (ehVid && storyPreviewVideo) {
+                    storyPreviewImg.style.display = "none";
+                    storyPreviewVideo.src = urlObj;
+                    storyPreviewVideo.style.display = "block";
+                    storyPreviewText.style.display = "none";
+                } else {
+                    if (storyPreviewVideo) storyPreviewVideo.style.display = "none";
+                    storyPreviewImg.src = urlObj;
                     storyPreviewImg.style.display = "block";
                     storyPreviewText.style.display = "none";
-                };
-                r.readAsDataURL(f);
+                }
             });
         }
 

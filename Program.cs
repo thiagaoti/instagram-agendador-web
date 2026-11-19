@@ -114,8 +114,9 @@ app.MapGet("/healthz", async (
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
 }).AllowAnonymous();
 
-app.MapGet("/media/post/{id:int}.jpg", async (
+app.MapGet("/media/post/{id:int}.{ext}", async (
     int id,
+    string ext,
     IDbContextFactory<AgendadorDbContext> dbFactory,
     CancellationToken cancellationToken) =>
 {
@@ -130,14 +131,15 @@ app.MapGet("/media/post/{id:int}.jpg", async (
     }
 
     var contentType = string.IsNullOrWhiteSpace(post.ContentTypeImagem)
-        ? "image/jpeg"
+        ? (string.Equals(ext, "mp4", StringComparison.OrdinalIgnoreCase) ? "video/mp4" : "image/jpeg")
         : post.ContentTypeImagem;
 
-    return Results.File(post.ConteudoImagem, contentType);
+    return Results.File(post.ConteudoImagem, contentType, enableRangeProcessing: true);
 }).AllowAnonymous();
 
-app.MapGet("/media/story/{id:int}.jpg", async (
+app.MapGet("/media/story/{id:int}.{ext}", async (
     int id,
+    string ext,
     IDbContextFactory<AgendadorDbContext> dbFactory,
     CancellationToken cancellationToken) =>
 {
@@ -152,10 +154,33 @@ app.MapGet("/media/story/{id:int}.jpg", async (
     }
 
     var contentType = string.IsNullOrWhiteSpace(story.ContentTypeImagem)
-        ? "image/jpeg"
+        ? (string.Equals(ext, "mp4", StringComparison.OrdinalIgnoreCase) ? "video/mp4" : "image/jpeg")
         : story.ContentTypeImagem;
 
-    return Results.File(story.ConteudoImagem, contentType);
+    return Results.File(story.ConteudoImagem, contentType, enableRangeProcessing: true);
+}).AllowAnonymous();
+
+app.MapGet("/media/carrossel/{id:int}.{ext}", async (
+    int id,
+    string ext,
+    IDbContextFactory<AgendadorDbContext> dbFactory,
+    CancellationToken cancellationToken) =>
+{
+    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+    var item = await db.MidiasPost
+        .AsNoTracking()
+        .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+
+    if (item is null || item.Conteudo.Length == 0)
+    {
+        return Results.NotFound();
+    }
+
+    var contentType = string.IsNullOrWhiteSpace(item.ContentType)
+        ? (string.Equals(ext, "mp4", StringComparison.OrdinalIgnoreCase) ? "video/mp4" : "image/jpeg")
+        : item.ContentType;
+
+    return Results.File(item.Conteudo, contentType, enableRangeProcessing: true);
 }).AllowAnonymous();
 
 app.MapPost("/api/meta/descobrir-contas", async (

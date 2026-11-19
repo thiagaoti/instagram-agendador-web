@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InstagramAgendador.Web.Models;
 
@@ -14,6 +15,8 @@ public static class StatusPostInstagram
 public static class TipoMidiaInstagram
 {
     public const string Feed = "Feed";
+    public const string FeedVideo = "FeedVideo";
+    public const string FeedCarrossel = "FeedCarrossel";
     public const string Stories = "Stories";
     public const string FeedEStories = "FeedEStories";
 }
@@ -43,6 +46,18 @@ public class InstagramPostAgendado
 
     [StringLength(80)]
     public string? ContentTypeImagem { get; set; }
+
+    public string? UrlsCarrosselJson { get; set; }
+
+    [NotMapped]
+    public bool EhVideo =>
+        (ContentTypeImagem ?? string.Empty).StartsWith("video/", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(TipoPublicacao, TipoMidiaInstagram.FeedVideo, StringComparison.OrdinalIgnoreCase);
+
+    [NotMapped]
+    public bool EhCarrossel =>
+        string.Equals(TipoPublicacao, TipoMidiaInstagram.FeedCarrossel, StringComparison.OrdinalIgnoreCase) ||
+        !string.IsNullOrWhiteSpace(UrlsCarrosselJson);
 
     [StringLength(1000)]
     public string? UrlImagemExterna { get; set; }

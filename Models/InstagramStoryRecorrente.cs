@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InstagramAgendador.Web.Models;
 
@@ -36,6 +37,10 @@ public class InstagramStoryRecorrente
     [Required]
     [StringLength(80)]
     public string ContentTypeImagem { get; set; } = "image/jpeg";
+
+    [NotMapped]
+    public bool EhVideo =>
+        (ContentTypeImagem ?? string.Empty).StartsWith("video/", StringComparison.OrdinalIgnoreCase);
 
     [StringLength(500)]
     public string? BaseUrlPublica { get; set; }

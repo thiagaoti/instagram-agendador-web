@@ -74,15 +74,8 @@ public sealed class InstagramAgendadorWorker : BackgroundService
         _ultimoPingUtc = agoraUtc;
 
         var urlBase = Environment.GetEnvironmentVariable("RENDER_EXTERNAL_URL")
-            ?? _configuration["KeepAlive:PublicUrl"];
-
-        if (string.IsNullOrWhiteSpace(urlBase))
-        {
-            var contas = await _agendadorService.ListarContasAsync(cancellationToken);
-            urlBase = contas
-                .Select(c => c.BaseUrlPublica)
-                .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u) && !u.Contains("localhost", StringComparison.OrdinalIgnoreCase));
-        }
+            ?? _configuration["KeepAlive:PublicUrl"]
+            ?? _agendadorService.UltimaBaseUrlConhecida;
 
         if (string.IsNullOrWhiteSpace(urlBase))
         {

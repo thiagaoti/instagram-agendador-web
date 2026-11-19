@@ -1,15 +1,26 @@
 @page
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @model InstagramAgendador.Web.Pages.ErrorModel
 @{
+    Layout = null;
     ViewData["Title"] = "Erro";
 }
-
-<div style="max-width:600px;margin:40px auto;padding:24px;background:#1a1520;border:1px solid #4d2638;border-radius:14px;color:#fceef5;">
-    <h1 style="margin:0 0 10px;color:#ff7aa8;">Ocorreu um erro</h1>
-    <p style="color:#c2b0ba;">Não foi possível concluir a requisição no momento.</p>
-    @if (Model.ShowRequestId)
-    {
-        <p style="font-size:12px;color:#9a8892;">Request ID: <code>@Model.RequestId</code></p>
-    }
-    <a href="/" style="display:inline-block;margin-top:12px;padding:10px 16px;background:#ff4f8b;color:#14080e;border-radius:8px;font-weight:800;text-decoration:none;">Voltar ao início</a>
-</div>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Erro - Agendador Instagram</title>
+</head>
+<body style="margin:0;min-height:100vh;background:#0f0b17;color:#fceef5;font-family:Inter,'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="max-width:600px;width:100%;padding:24px;background:#1a1520;border:1px solid #4d2638;border-radius:14px;color:#fceef5;">
+        <h1 style="margin:0 0 10px;color:#ff7aa8;">Ocorreu um erro</h1>
+        <p style="color:#c2b0ba;">Não foi possível concluir a requisição no momento.</p>
+        @if (Model.ShowRequestId)
+        {
+            <p style="font-size:12px;color:#9a8892;">Request ID: <code>@Model.RequestId</code></p>
+        }
+        <a href="/" style="display:inline-block;margin-top:12px;padding:10px 16px;background:#ff4f8b;color:#14080e;border-radius:8px;font-weight:800;text-decoration:none;">Voltar ao início</a>
+    </div>
+</body>
+</html>
